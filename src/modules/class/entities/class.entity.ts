@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Student } from '../../student/entities/student.entity';
 import { ClassCourse } from './class-course.entity';
+import { ClassSession } from './class-session.entity';
 
 @Entity({ name: 'class' })
 export class Class {
@@ -21,6 +22,9 @@ export class Class {
 
   @OneToMany(() => ClassCourse, (classCourse) => classCourse.class)
   classCourses: ClassCourse[];
+
+  @OneToMany(() => ClassSession, (session) => session.class)
+  sessions: ClassSession[];
 
   @ApiProperty()
   @Column({ length: 50 })

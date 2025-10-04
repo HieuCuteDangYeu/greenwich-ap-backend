@@ -12,6 +12,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { Department } from '../../department/entities/department.entity';
 import { ClassCourse } from '../../class/entities/class-course.entity';
+import { ClassSession } from '../../class/entities/class-session.entity';
 @Entity({ name: 'course' })
 export class Course {
   @ApiProperty()
@@ -20,6 +21,9 @@ export class Course {
 
   @OneToMany(() => ClassCourse, (classCourse) => classCourse.course)
   classCourses: ClassCourse[];
+
+  @OneToMany(() => ClassSession, (session) => session.course)
+  classSessions: ClassSession[];
 
   @ManyToOne(() => Department, { nullable: false })
   @JoinColumn({ name: 'department_id' })
