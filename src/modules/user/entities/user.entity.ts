@@ -4,12 +4,15 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Role } from './role.entity';
 import { Campus } from './campus.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { Thread } from '../../thread/entities/thread.entity';
+import { Comment } from '../../comment/entities/comment.entity';
 
 @Entity({ name: 'user_account' })
 export class User {
@@ -113,4 +116,10 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => Thread, (thread) => thread.createdBy)
+  threadsCreated!: Thread[];
+
+  @OneToMany(() => Comment, (comment) => comment.createdBy)
+  comments!: Comment[];
 }

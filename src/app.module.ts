@@ -10,6 +10,8 @@ import { CourseModule } from './modules/course/course.module';
 import { CampusModule } from './modules/campus/campus.module';
 import { DepartmentModule } from './modules/department/department.module';
 import { ClassModule } from './modules/class/class.module';
+import { ThreadModule } from './modules/thread/thread.module';
+import { CommentModule } from './modules/comment/comment.module';
 import { RoomModule } from './modules/room/room.module';
 import { TimeSlotModule } from './modules/time-slot/time-slot.module';
 import { HealthController } from './health/health.controller';
@@ -34,6 +36,8 @@ import { HealthController } from './health/health.controller';
     CampusModule,
     DepartmentModule,
     ClassModule,
+    ThreadModule,
+    CommentModule,
     RoomModule,
     TimeSlotModule,
   ],
