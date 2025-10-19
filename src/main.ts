@@ -5,9 +5,12 @@ import compression from 'compression';
 import { AppModule } from './app.module';
 import { setupSwagger } from './config/swagger.config';
 import cookieParser from 'cookie-parser';
+import { Express } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  (app.getHttpAdapter().getInstance() as Express).set('trust proxy', 1);
 
   app.use(cookieParser());
 
@@ -18,6 +21,15 @@ async function bootstrap() {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Cookie',
+    ],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   // Security
