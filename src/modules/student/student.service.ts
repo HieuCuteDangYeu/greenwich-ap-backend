@@ -6,12 +6,15 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Student } from './entities/student.entity';
-import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Class } from '../class/entities/class.entity';
-import * as bcrypt from 'bcrypt';
+import { UserStatus } from '../user/dto/update-user-status.dto';
+import { StudentProfileDto } from './dto/student-profile.dto';
+import { StaffService } from '../staff/staff.service';
+import { Staff } from '../staff/entities/staff.entity';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class StudentService {
@@ -23,114 +26,72 @@ export class StudentService {
     private readonly classRepo: Repository<Class>,
 
     private readonly userService: UserService,
+
+    private readonly staffService: StaffService,
   ) {}
 
   // CREATE
   async create(dto: CreateStudentDto): Promise<Student> {
-    return await this.studentRepo.manager.transaction(async (manager) => {
-      let user: User;
+    // Check student code
+    const studentCode =
+      dto.studentCode ?? `FGW${Date.now().toString().slice(-5)}`;
+    const existing = await this.studentRepo.findOne({ where: { studentCode } });
+    if (existing) throw new BadRequestException('Student code already exists');
 
-      // If not having userID, add new user
-      if (!dto.userId) {
-        if (!dto.email) throw new BadRequestException('Email is required');
+    // Check mentor
+    let mentor: Staff | null = null;
+    if (dto.mentorId) {
+      mentor = await this.staffService.findOne(dto.mentorId);
+    }
 
-        // Check existing email
-        const existingEmail = await this.userService.findByEmail(dto.email);
-        if (existingEmail)
-          throw new BadRequestException('Email already exists');
+    // Check class
+    let classEnt: Class | null = null;
+    if (dto.classId) {
+      classEnt = await this.classRepo.findOne({ where: { id: dto.classId } });
+      if (!classEnt) throw new NotFoundException('Class not found');
+    }
 
-        const role = await this.userService.findRoleByName('Student');
+    // Create new user
+    const user = await this.userService.create({
+      ...dto.user,
+      roleId: (await this.userService.findRoleByName('Student')).id,
+    });
 
-        // Only hash password if user is newly created
-        const hashed = dto.password
-          ? await bcrypt.hash(dto.password, 10)
-          : null;
-
-        // Create user using same transaction
-        user = manager.create(User, {
-          email: dto.email,
-          password: hashed ?? undefined,
-          givenName: dto.givenName,
-          surname: dto.surname,
-          campusId: dto.campusId,
-          roleId: role.id,
-        });
-        await manager.save(user);
-      } else {
-        user = await this.userService.findOne(dto.userId);
-        if (!user)
-          throw new NotFoundException(`User with ID ${dto.userId} not found`);
-        if (user.role?.name !== 'Student') {
-          throw new BadRequestException('User must have Student role');
-        }
-      }
-
-      // Check student code
-      const studentCode =
-        dto.studentCode ?? `FGW${user.id.toString().padStart(5, '0')}`;
-      const existing = await manager.findOne(Student, {
-        where: { studentCode },
-      });
-      if (existing)
-        throw new BadRequestException('Student code already exists');
-
-      // Check mentor
-      let mentor: User | null = null;
-      if (dto.mentorId) {
-        mentor = await this.userService.findOne(dto.mentorId);
-        if (!mentor) throw new NotFoundException('Mentor not found');
-      }
-
-      // Check class
-      if (dto.classId) {
-        const existingClass = await manager.findOne(Class, {
-          where: { id: dto.classId },
-        });
-        if (!existingClass) throw new NotFoundException('Class not found');
-      }
-
-      // Create new student in same transaction
-      const student = manager.create(Student, {
+    // Create new student
+    try {
+      const student = this.studentRepo.create({
         ...dto,
         studentCode,
         user,
         mentor,
       });
-
-      return await manager.save(student);
-    });
+      return await this.studentRepo.save(student);
+    } catch (error) {
+      await this.userService.delete(user.id);
+      throw error;
+    }
   }
 
   // READ all with filters
-  async findAll(filter?: {
-    campusId?: number;
-    mentorId?: number;
-    status?: string;
-    academicYear?: string;
-  }): Promise<Student[]> {
+  async findAll(opts?: { page?: number; limit?: number; search?: string }) {
     const qb = this.studentRepo
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.user', 'u')
-      .leftJoinAndSelect('s.mentor', 'm')
-      .orderBy('s.createdAt', 'DESC');
+      .leftJoinAndSelect('u.campus', 'campus')
+      .leftJoinAndSelect('s.mentor', 'mentor')
+      .leftJoinAndSelect('s.class', 'class');
 
-    if (filter?.campusId) {
-      qb.andWhere('u.campusId = :campusId', { campusId: filter.campusId });
+    // Search by student code, full name or email
+    if (opts?.search) {
+      qb.where(
+        's.studentCode ILIKE :q OR u.fullName ILIKE :q OR u.email ILIKE :q',
+        { q: `%${opts.search}%` },
+      );
     }
-
-    if (filter?.mentorId) {
-      qb.andWhere('s.mentorId = :mentorId', { mentorId: filter.mentorId });
-    }
-
-    if (filter?.status) {
-      qb.andWhere('s.status = :status', { status: filter.status });
-    }
-
-    if (filter?.academicYear) {
-      qb.andWhere('s.academicYear = :academicYear', {
-        academicYear: filter.academicYear,
-      });
-    }
+    qb.orderBy('s.createdAt', 'DESC');
+    if (opts?.limit) qb.take(opts.limit);
+    if (opts?.page && opts.page > 0 && opts.limit)
+      qb.skip((opts.page - 1) * opts.limit);
 
     return qb.getMany();
   }
@@ -154,20 +115,40 @@ export class StudentService {
     return student;
   }
 
+  // GET Student Profile
+  async getStudentProfile(userId: number): Promise<StudentProfileDto> {
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+      relations: ['user', 'mentor', 'user.campus'],
+    });
+
+    if (!student) throw new NotFoundException('Student profile not found');
+
+    return plainToInstance(StudentProfileDto, student, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  // UPDATE
   async update(
     id: number,
     dto: UpdateStudentDto,
   ): Promise<{ success: boolean }> {
     const student = await this.findOne(id);
 
-    // --- Update mentor ---
+    // --- Update related User ---
+    if (dto.user) {
+      await this.userService.update(student.user.id, dto.user);
+    }
+
+    // Update mentor
     if (dto.mentorId) {
-      const mentor = await this.userService.findOne(dto.mentorId);
+      const mentor = await this.staffService.findOne(dto.mentorId);
       if (!mentor) throw new NotFoundException('Mentor not found');
       student.mentor = mentor;
     }
 
-    // --- Update class ---
+    // Update class
     if (dto.classId) {
       const existingClass = await this.classRepo.findOne({
         where: { id: dto.classId },
@@ -176,29 +157,68 @@ export class StudentService {
       student.class = existingClass;
     }
 
-    // --- Other fields ---
-    if (dto.academicYear !== undefined)
-      student.academicYear = dto.academicYear ?? null;
+    // Update studentCode
+    if (dto.studentCode) {
+      const existingStudent = await this.studentRepo.findOne({
+        where: { studentCode: dto.studentCode },
+      });
+      if (existingStudent && existingStudent.id !== id) {
+        throw new BadRequestException('Student code already exists');
+      }
+      student.studentCode = dto.studentCode;
+    }
 
-    if (dto.enrolmentDay !== undefined)
-      student.enrolmentDay = dto.enrolmentDay
-        ? new Date(dto.enrolmentDay)
-        : undefined;
+    const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
+      'faculty',
+      'year',
+      'term',
+      'status',
+    ];
 
-    if (dto.status !== undefined) student.status = dto.status;
+    const updates: Partial<
+      Record<keyof UpdateStudentDto, string | number | null>
+    > = {};
+
+    updateFields.forEach((key) => {
+      const value = dto[key];
+      if (value !== undefined) {
+        updates[key] = value ?? null;
+      }
+    });
+
+    Object.assign(student, updates);
+
+    if (dto.enrolmentDay !== undefined) {
+      student.enrolmentDay = new Date(dto.enrolmentDay);
+    }
 
     await this.studentRepo.save(student);
     return { success: true };
   }
 
-  // DELETE (soft: set status = INACTIVE)
-  async deactivate(id: number): Promise<Student> {
-    const student = await this.findOne(id);
+  // DELETE (soft: set user status = INACTIVE)
+  async updateStudentStatus(
+    studentId: number,
+    status: UserStatus,
+  ): Promise<{ success: true }> {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId },
+      relations: ['user'],
+    });
+
     if (!student) {
-      throw new NotFoundException(`Student not found`);
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
 
-    await this.userService.deactivate(student.user.id);
-    return await this.studentRepo.save(student);
+    if (!student.user || !student.user.id) {
+      throw new NotFoundException(
+        `Related user not found for student ${studentId}`,
+      );
+    }
+
+    // Call userService to update the user status
+    await this.userService.updateStatus(student.user.id, status);
+    await this.studentRepo.save(student);
+    return { success: true };
   }
 }

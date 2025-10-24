@@ -5,9 +5,14 @@ import { StudentService } from './student.service';
 import { StudentController } from './student.controller';
 import { Class } from '../class/entities/class.entity';
 import { UserModule } from '../user/user.module';
+import { StaffModule } from '../staff/staff.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Student, Class]), UserModule],
+  imports: [
+    TypeOrmModule.forFeature([Student, Class]),
+    UserModule,
+    StaffModule,
+  ],
   providers: [StudentService],
   controllers: [StudentController],
   exports: [StudentService, TypeOrmModule],

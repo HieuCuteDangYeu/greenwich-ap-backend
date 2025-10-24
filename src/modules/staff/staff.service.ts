@@ -12,6 +12,7 @@ import { Staff } from './entities/staff.entity';
 import { StaffRole } from './entities/staff_role.entity';
 import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
+import { UserStatus } from '../user/dto/update-user-status.dto';
 
 @Injectable()
 export class StaffService {
@@ -105,13 +106,27 @@ export class StaffService {
   }
 
   // DELETE (soft: set user status = INACTIVE)
-  async deactivate(id: number): Promise<{ success: true }> {
-    const staff = await this.findOne(id);
+  async updateStaffStatus(
+    staffId: number,
+    status: UserStatus,
+  ): Promise<{ success: true }> {
+    const staff = await this.staffRepo.findOne({
+      where: { id: staffId },
+      relations: ['user'],
+    });
+
     if (!staff) {
-      throw new NotFoundException(`Staff not found`);
+      throw new NotFoundException(`Staff with ID ${staffId} not found`);
     }
 
-    await this.userService.deactivate(staff.user.id);
+    if (!staff.user || !staff.user.id) {
+      throw new NotFoundException(
+        `Related user not found for staff ${staffId}`,
+      );
+    }
+
+    // Call userService to update the user status
+    await this.userService.updateStatus(staff.user.id, status);
     await this.staffRepo.save(staff);
     return { success: true };
   }

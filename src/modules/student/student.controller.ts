@@ -5,19 +5,22 @@ import {
   Body,
   Patch,
   Param,
-  Query,
   ParseIntPipe,
   UseGuards,
+  Req,
+  HttpStatus,
+  Query,
 } from '@nestjs/common';
 import {
   ApiController,
   ApiCreateOperation,
   ApiFindAllOperation,
   ApiFindOneOperation,
+  ApiPaginationQuery,
   ApiUpdateOperation,
-  ApiDeactivateOperation,
-  ApiStudentFilterQuery,
+  ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -25,17 +28,44 @@ import { Student } from './entities/student.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { User } from '../user/entities/user.entity';
 import { UserRole } from '../../common/enums/roles.enum';
+import { StudentProfileDto } from './dto/student-profile.dto';
+import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
+
+interface JwtAuthRequest extends Request {
+  user?: User;
+}
 
 @ApiController('Students', { requireAuth: true })
 @Controller('students')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 
+  // Student Profile
+  @Get('me')
+  @Roles(UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get student profile' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Your profile',
+    type: StudentProfileDto,
+  })
+  async getStudentProfile(
+    @Req() req: JwtAuthRequest,
+  ): Promise<StudentProfileDto> {
+    if (!req.user) {
+      throw new Error('No authenticated user found');
+    }
+    return this.studentService.getStudentProfile(req.user.id);
+  }
+
+  // ------------ ADMIN ONLY ------------
   // CREATE
   @Post()
+  @Roles(UserRole.ADMIN)
   @ApiCreateOperation(Student, 'Create new student')
   async create(@Body() dto: CreateStudentDto) {
     return await this.studentService.create(dto);
@@ -43,24 +73,25 @@ export class StudentController {
 
   // READ all
   @Get()
-  @ApiFindAllOperation(Student, 'List all students')
-  @ApiStudentFilterQuery()
-  async findAll(
-    @Query('campusId') campusId?: number,
-    @Query('mentorId') mentorId?: number,
-    @Query('status') status?: string,
-    @Query('academicYear') academicYear?: string,
+  @Roles(UserRole.ADMIN)
+  @ApiFindAllOperation(Student)
+  @ApiPaginationQuery()
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
   ) {
-    return this.studentService.findAll({
-      campusId,
-      mentorId,
-      status,
-      academicYear,
-    });
+    const opts = {
+      page: Number(page) || 1,
+      limit: Number(limit) || 25,
+      search,
+    };
+    return this.studentService.findAll(opts);
   }
 
   // READ one
   @Get(':id')
+  @Roles(UserRole.ADMIN)
   @ApiFindOneOperation(Student, 'Get student by ID')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.studentService.findOne(id);
@@ -68,15 +99,20 @@ export class StudentController {
 
   // UPDATE
   @Patch(':id')
+  @Roles(UserRole.ADMIN)
   @ApiUpdateOperation(Student, 'Update student details')
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateStudentDto) {
     return this.studentService.update(id, dto);
   }
 
-  // DELETE (soft: set status=OTHER)
-  @Patch(':id/deactivate')
-  @ApiDeactivateOperation(Student)
-  deactivate(@Param('id', ParseIntPipe) id: number) {
-    return this.studentService.deactivate(id);
+  // DELETE (soft: set user status=INACTIVE)
+  @Patch(':id/status')
+  @Roles(UserRole.ADMIN)
+  @ApiUpdateStatusOperation(UpdateUserStatusDto, 'Update student status')
+  async updateStudentStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateUserStatusDto,
+  ) {
+    return this.studentService.updateStudentStatus(id, body.status);
   }
 }

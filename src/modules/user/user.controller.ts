@@ -5,11 +5,9 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
   ParseIntPipe,
   UseGuards,
-  Req,
 } from '@nestjs/common';
 import {
   ApiController,
@@ -17,68 +15,42 @@ import {
   ApiFindAllOperation,
   ApiFindOneOperation,
   ApiUpdateOperation,
-  ApiDeleteOperation,
   ApiPaginationQuery,
-  ApiActivateOperation,
-  ApiDeactivateOperation,
+  ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { User } from './entities/user.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UserRole } from '../../common/enums/roles.enum';
 
-interface JwtAuthRequest extends Request {
-  user?: User;
-}
-
 @ApiController('Users', { requireAuth: true })
 @Controller('users')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  // ---------USERS---------
-  // PATCH/users/me (Update own profile)
-  @Patch('me')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update own profile' })
-  @ApiResponse({
-    status: 200,
-    description: 'Profile updated',
-    type: User,
-  })
-  async updateMe(
-    @Req() req: JwtAuthRequest,
-    @Body() dto: UpdateOwnProfileDto,
-  ): Promise<User> {
-    if (!req.user) {
-      throw new Error('No authenticated user found');
-    }
-
-    return await this.userService.updateProfile(req.user.id, dto);
-  }
-
-  // ---------ADMIN---------
+  // ---------ADMIN ONLY---------
   // CREATE
   @Post()
-  @ApiCreateOperation(User)
   @Roles(UserRole.ADMIN)
+  @ApiCreateOperation(User)
   create(@Body() dto: CreateUserDto) {
     return this.userService.create(dto);
   }
 
   // READ all
   @Get()
+  @Roles(UserRole.ADMIN)
   @ApiFindAllOperation(User)
   @ApiPaginationQuery()
-  @Roles(UserRole.ADMIN)
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -93,41 +65,28 @@ export class UserController {
 
   // READ one
   @Get(':id')
-  @ApiFindOneOperation(User)
   @Roles(UserRole.ADMIN)
+  @ApiFindOneOperation(User)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findOne(id);
   }
 
   // UPDATE
   @Patch(':id')
-  @ApiUpdateOperation(User)
   @Roles(UserRole.ADMIN)
+  @ApiUpdateOperation(User)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
     return this.userService.update(id, dto);
   }
 
-  // ACTIVATE (soft: set status=ACTIVE)
-  @Patch(':id/activate')
-  @ApiActivateOperation(User)
+  // Soft DELETE (Update user status)
+  @Patch(':id/status')
   @Roles(UserRole.ADMIN)
-  activate(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.activate(id);
-  }
-
-  // DELETE (soft: set status=INACTIVE)
-  @Patch(':id/deactivate')
-  @ApiDeactivateOperation(User)
-  @Roles(UserRole.ADMIN)
-  deactivate(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.deactivate(id);
-  }
-
-  // DELETE (remove user)
-  @Delete(':id')
-  @ApiDeleteOperation(User)
-  @Roles(UserRole.ADMIN)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.remove(id);
+  @ApiUpdateStatusOperation(UpdateUserStatusDto, 'Update user status')
+  async updateUserStatus(
+    @Param('id') id: number,
+    @Body() dto: UpdateUserStatusDto,
+  ) {
+    return this.userService.updateStatus(id, dto.status);
   }
 }
