@@ -19,7 +19,7 @@ import {
   ApiDeleteOperation,
   ApiPaginationQuery,
 } from '../../common/decorators/swagger.decorator';
-import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiQuery } from '@nestjs/swagger';
 import { DepartmentService } from './department.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
@@ -27,17 +27,18 @@ import { Department } from './entities/department.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { StaffRole, UserRole } from '../../common/enums/roles.enum';
+import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 
-@ApiController('Departments')
+@ApiController('Departments', { requireAuth: true })
 @Controller('departments')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')
 export class DepartmentController {
   constructor(private readonly svc: DepartmentService) {}
 
   /** Create a department (admin only). */
   @Post()
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiCreateOperation(Department)
   create(@Body() dto: CreateDepartmentDto) {
     return this.svc.create(dto);
@@ -45,7 +46,8 @@ export class DepartmentController {
 
   /** List all departments (all roles). */
   @Get()
-  @Roles('admin', 'guardian', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.GUARDIAN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindAllOperation(Department)
   @ApiPaginationQuery()
   @ApiQuery({ name: 'search', required: false })
@@ -63,7 +65,8 @@ export class DepartmentController {
 
   /** Get a department by id (all roles). */
   @Get(':id')
-  @Roles('admin', 'guardian', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.GUARDIAN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindOneOperation(Department)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.svc.findOne(id);
@@ -71,7 +74,7 @@ export class DepartmentController {
 
   /** Update a department (admin only). */
   @Patch(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiUpdateOperation(Department)
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -82,7 +85,7 @@ export class DepartmentController {
 
   /** Delete a department (admin only). */
   @Delete(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiDeleteOperation(Department)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.svc.remove(id);

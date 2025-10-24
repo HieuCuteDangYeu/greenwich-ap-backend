@@ -10,7 +10,7 @@ import {
   UseGuards,
   NotFoundException,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,12 +28,12 @@ import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { SetStaffRoleDto } from './dto/set-staff-role.dto';
 import { GetStaffRoleResponseDto } from './dto/get-staff-role-response.dto';
+import { UserRole } from '../../common/enums/roles.enum';
 
-@ApiController('Staffs')
+@ApiController('Staffs', { requireAuth: true })
 @Controller('staffs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
-@ApiBearerAuth('access-token')
+@Roles(UserRole.ADMIN)
 export class StaffController {
   constructor(private readonly staffService: StaffService) {}
 

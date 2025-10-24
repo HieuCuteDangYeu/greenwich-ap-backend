@@ -9,7 +9,6 @@ import {
   Delete,
   ParseIntPipe,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { ApiParam } from '@nestjs/swagger';
 import { CommentService } from './comment.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -20,10 +19,11 @@ import {
   ApiFindAllOperation,
 } from 'src/common/decorators/swagger.decorator';
 import { Comment } from './entities/comment.entity';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('comments')
-@ApiController('Comments')
-@UseGuards(AuthGuard('jwt'))
+@ApiController('Comments', { requireAuth: true })
+@UseGuards(JwtAuthGuard)
 export class CommentController {
   constructor(private readonly commentService: CommentService) {}
 

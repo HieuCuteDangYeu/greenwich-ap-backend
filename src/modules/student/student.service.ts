@@ -145,6 +145,15 @@ export class StudentService {
     return student;
   }
 
+  // READ by user ID
+  async findByUserId(userId: number): Promise<Student | null> {
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+      relations: ['user', 'mentor'],
+    });
+    return student;
+  }
+
   async update(
     id: number,
     dto: UpdateStudentDto,

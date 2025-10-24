@@ -23,6 +23,8 @@ import { RolesGuard } from './guards/roles.guard';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import type { Response } from 'express';
+import { MeResponseDto } from './dto/me-response.dto';
+import { plainToInstance } from 'class-transformer';
 
 interface GoogleAuthRequest extends Request {
   user?: GoogleUserDto;
@@ -99,15 +101,17 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Returns the authenticated user's details",
-    type: User,
+    type: MeResponseDto,
   })
   @CommonApiResponses()
-  me(@Req() req: JwtAuthRequest): User {
+  me(@Req() req: JwtAuthRequest): MeResponseDto {
     if (!req.user) {
       throw new Error('No authenticated user found');
     }
 
-    return req.user;
+    return plainToInstance(MeResponseDto, req.user, {
+      excludeExtraneousValues: true,
+    });
   }
 
   @Post('refresh')

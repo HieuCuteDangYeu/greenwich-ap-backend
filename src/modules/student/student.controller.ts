@@ -18,7 +18,6 @@ import {
   ApiDeactivateOperation,
   ApiStudentFilterQuery,
 } from '../../common/decorators/swagger.decorator';
-import { ApiBearerAuth } from '@nestjs/swagger';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -26,12 +25,12 @@ import { Student } from './entities/student.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserRole } from '../../common/enums/roles.enum';
 
-@ApiController('Students')
+@ApiController('Students', { requireAuth: true })
 @Controller('students')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
-@ApiBearerAuth('access-token')
+@Roles(UserRole.ADMIN)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
 

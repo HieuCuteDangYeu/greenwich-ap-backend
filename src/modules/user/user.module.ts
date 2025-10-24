@@ -6,9 +6,10 @@ import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Campus } from './entities/campus.entity';
 import { Student } from '../student/entities/student.entity';
+import { Staff } from '../staff/entities/staff.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Role, Campus, Student])],
+  imports: [TypeOrmModule.forFeature([User, Role, Campus, Student, Staff])],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

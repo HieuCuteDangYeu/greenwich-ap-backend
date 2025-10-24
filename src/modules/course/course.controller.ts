@@ -27,8 +27,10 @@ import { Course } from './entities/course.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { StaffRole, UserRole } from '../../common/enums/roles.enum';
+import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 
-@ApiController('Courses')
+@ApiController('Courses', { requireAuth: true })
 @Controller('courses')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth('access-token')
@@ -37,7 +39,7 @@ export class CourseController {
 
   // Create: admins only
   @Post()
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiCreateOperation(Course)
   create(@Body() dto: CreateCourseDto) {
     return this.svc.create(dto);
@@ -45,7 +47,8 @@ export class CourseController {
 
   // List: everyone authenticated
   @Get()
-  @Roles('admin', 'guardian', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.GUARDIAN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindAllOperation(Course)
   @ApiPaginationQuery()
   @ApiQuery({ name: 'departmentId', required: false, type: Number })
@@ -72,7 +75,8 @@ export class CourseController {
 
   // Read: everyone authenticated
   @Get(':id')
-  @Roles('admin', 'guardian', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.GUARDIAN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindOneOperation(Course)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.svc.findOne(id);
@@ -80,7 +84,7 @@ export class CourseController {
 
   // Update: admins only
   @Patch(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiUpdateOperation(Course)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCourseDto) {
     return this.svc.update(id, dto);
@@ -88,7 +92,7 @@ export class CourseController {
 
   // Delete: admins only
   @Delete(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiDeleteOperation(Course)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.svc.remove(id);
@@ -96,7 +100,8 @@ export class CourseController {
 
   // Bonus: “/departments/{id}/courses” per API doc
   @Get('/by-department/:departmentId')
-  @Roles('admin', 'guardian', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.GUARDIAN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindAllOperation(Course, 'Get courses by department')
   findByDepartment(@Param('departmentId', ParseIntPipe) departmentId: number) {
     return this.svc.findByDepartment(departmentId);

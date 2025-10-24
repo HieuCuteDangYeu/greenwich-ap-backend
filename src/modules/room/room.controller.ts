@@ -27,15 +27,16 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ApiQuery } from '@nestjs/swagger';
+import { UserRole } from '../../common/enums/roles.enum';
 
-@ApiController('Rooms')
+@ApiController('Rooms', { requireAuth: true })
 @Controller('rooms')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RoomController {
   constructor(private readonly roomService: RoomService) {}
 
   @Post()
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiCreateOperation(Room)
   create(@Body() dto: CreateRoomDto) {
     return this.roomService.create(dto);
@@ -77,14 +78,14 @@ export class RoomController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiUpdateOperation(Room)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateRoomDto) {
     return this.roomService.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @ApiDeleteOperation(Room)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.roomService.remove(id);

@@ -27,16 +27,20 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { StudentScheduleResponseDto } from './dto/student-schedule-response.dto';
+import { StaffRole, UserRole } from '../../common/enums/roles.enum';
+import { StaffRolesGuard } from '../auth/guards/staff-roles.guard';
+import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 
 @ApiController('Attendance', { requireAuth: true })
 @Controller('attendance')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, StaffRolesGuard)
 export class AttendanceController {
   constructor(private readonly attendanceService: AttendanceService) {}
 
   // CREATE
   @Post()
-  @Roles('admin', 'teacher')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiCreateOperation(Attendance, 'Create new attendance record')
   create(@Body() dto: CreateAttendanceDto) {
     return this.attendanceService.create(dto);
@@ -44,7 +48,8 @@ export class AttendanceController {
 
   // READ all
   @Get()
-  @Roles('admin', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindAllOperation(Attendance, 'List all attendance records')
   @ApiQuery({
     name: 'studentId',
@@ -88,7 +93,8 @@ export class AttendanceController {
   // Returns student's schedule with attendance status for a date range (maximum 7 days)
   // Includes: class, course, room, teacher, attendance status, day of week, time slots
   @Get('schedule')
-  @Roles('admin', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiOperation({
     summary:
       'Get student schedule with attendance for a date range (max 7 days)',
@@ -128,7 +134,8 @@ export class AttendanceController {
 
   // READ one
   @Get(':id')
-  @Roles('admin', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindOneOperation(Attendance, 'Get attendance record by ID')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.attendanceService.findOne(id);
@@ -136,7 +143,8 @@ export class AttendanceController {
 
   // UPDATE
   @Patch(':id')
-  @Roles('admin', 'teacher')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiUpdateOperation(Attendance, 'Update attendance record')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -147,37 +155,16 @@ export class AttendanceController {
 
   // DELETE
   @Delete(':id')
-  @Roles('admin')
+  @Roles(UserRole.ADMIN)
   @ApiDeleteOperation(Attendance, 'Delete attendance record')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.attendanceService.remove(id);
   }
 
-  // GET attendance by student
-  @Get('student/:studentId')
-  @Roles('admin', 'teacher', 'student')
-  @ApiFindAllOperation(
-    Attendance,
-    'Get all attendance records for a specific student',
-  )
-  findByStudent(@Param('studentId', ParseIntPipe) studentId: number) {
-    return this.attendanceService.findByStudent(studentId);
-  }
-
-  // GET attendance by session
-  @Get('session/:sessionId')
-  @Roles('admin', 'teacher')
-  @ApiFindAllOperation(
-    Attendance,
-    'Get all attendance records for a specific session',
-  )
-  findBySession(@Param('sessionId', ParseIntPipe) sessionId: number) {
-    return this.attendanceService.findBySession(sessionId);
-  }
-
   // GET student attendance statistics
   @Get('student/:studentId/stats')
-  @Roles('admin', 'teacher', 'student')
+  @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiFindOneOperation(Attendance, 'Get attendance statistics for a student')
   getStudentStats(@Param('studentId', ParseIntPipe) studentId: number) {
     return this.attendanceService.getStudentStats(studentId);

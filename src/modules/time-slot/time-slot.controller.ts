@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import {
+  ApiController,
   ApiCreateOperation,
   ApiDeleteOperation,
   ApiFindAllOperation,
@@ -26,18 +27,13 @@ import {
 } from 'src/common/decorators/swagger.decorator';
 import { TimeSlot } from './entities/time-slot.entity';
 import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { UserRole } from '../../common/enums/roles.enum';
 
-@ApiTags('Time Slots')
-@ApiBearerAuth('access-token')
+@ApiController('Time Slots', { requireAuth: true })
 @Controller('time-slots')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN', 'STAFF')
+@Roles(UserRole.ADMIN, UserRole.STAFF)
 export class TimeSlotController {
   constructor(private readonly timeSlotService: TimeSlotService) {}
 

@@ -28,8 +28,9 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
+import { UserRole } from '../../common/enums/roles.enum';
 
-@ApiController('Classes')
+@ApiController('Classes', { requireAuth: true })
 @Controller('classes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ClassController {
@@ -37,7 +38,7 @@ export class ClassController {
 
   @ApiCreateOperation(Class)
   @Post()
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   create(@Body() createClassDto: CreateClassDto) {
     return this.classService.create(createClassDto);
   }
@@ -57,28 +58,28 @@ export class ClassController {
 
   @ApiUpdateOperation(Class)
   @Patch(':id')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   update(@Param('id') id: string, @Body() updateClassDto: UpdateClassDto) {
     return this.classService.update(+id, updateClassDto);
   }
 
   @ApiDeleteOperation(Class)
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.classService.remove(+id);
   }
 
   @ApiOperation({ summary: 'Add a course to a class' })
   @Post(':id/courses')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   addCourse(@Param('id') id: string, @Body() addCourseDto: AddCourseDto) {
     return this.classService.addCourse(+id, addCourseDto);
   }
 
   @ApiOperation({ summary: 'Remove a course from a class' })
   @Delete(':id/courses/:courseId')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   removeCourse(@Param('id') id: string, @Param('courseId') courseId: string) {
     return this.classService.removeCourse(+id, +courseId);
   }
@@ -97,7 +98,7 @@ export class ClassController {
 
   @ApiOperation({ summary: 'Create a session for a class' })
   @Post(':id/sessions')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   createSession(
     @Param('id') id: string,
     @Body() createSessionDto: CreateClassSessionDto,
@@ -119,7 +120,7 @@ export class ClassController {
 
   @ApiOperation({ summary: 'Update a class session' })
   @Patch(':id/sessions/:sessionId')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   updateSession(
     @Param('id') id: string,
     @Param('sessionId') sessionId: string,
@@ -130,7 +131,7 @@ export class ClassController {
 
   @ApiOperation({ summary: 'Remove a class session' })
   @Delete(':id/sessions/:sessionId')
-  @Roles('ADMIN', 'STAFF')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   removeSession(
     @Param('id') id: string,
     @Param('sessionId') sessionId: string,

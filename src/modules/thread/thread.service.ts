@@ -101,4 +101,25 @@ export class ThreadService {
 
     return { message: 'Thread deleted successfully' };
   }
+
+  async findUserThreads(userId: number): Promise<ThreadResponseDto[]> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const threads = await this.threadRepo
+      .createQueryBuilder('thread')
+      .leftJoinAndSelect('thread.createdBy', 'createdBy')
+      .leftJoinAndSelect('thread.comments', 'comments')
+      .leftJoinAndSelect('thread.taggedUsers', 'taggedUsers')
+      .where('thread.createdBy.id = :userId', { userId })
+      .orWhere('taggedUsers.id = :userId', { userId })
+      .orderBy('thread.createdAt', 'DESC')
+      .getMany();
+
+    return plainToInstance(ThreadResponseDto, threads, {
+      excludeExtraneousValues: true,
+    });
+  }
 }

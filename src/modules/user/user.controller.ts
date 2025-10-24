@@ -30,8 +30,9 @@ import { User } from './entities/user.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Request } from 'express';
+import { UserRole } from '../../common/enums/roles.enum';
 
 interface JwtAuthRequest extends Request {
   user?: User;
@@ -40,7 +41,6 @@ interface JwtAuthRequest extends Request {
 @ApiController('Users', { requireAuth: true })
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -48,7 +48,6 @@ export class UserController {
   // PATCH/users/me (Update own profile)
   @Patch('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update own profile' })
   @ApiResponse({
     status: 200,
@@ -67,25 +66,19 @@ export class UserController {
   }
 
   // ---------ADMIN---------
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiBearerAuth('access-token')
-
   // CREATE
   @Post()
-  @ApiOperation({ summary: 'Create new user (STAFF only)' })
-  @ApiResponse({ status: 201, description: 'User created', type: User })
   @ApiCreateOperation(User)
+  @Roles(UserRole.ADMIN)
   create(@Body() dto: CreateUserDto) {
     return this.userService.create(dto);
   }
 
   // READ all
   @Get()
-  @ApiOperation({ summary: 'List all users (STAFF only)' })
-  @ApiResponse({ status: 200, description: 'List of users', type: [User] })
   @ApiFindAllOperation(User)
   @ApiPaginationQuery()
+  @Roles(UserRole.ADMIN)
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -100,34 +93,32 @@ export class UserController {
 
   // READ one
   @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({ status: 200, description: 'User details', type: User })
   @ApiFindOneOperation(User)
+  @Roles(UserRole.ADMIN)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.userService.findOne(id);
   }
 
   // UPDATE
   @Patch(':id')
-  @ApiOperation({ summary: 'Update user details (STAFF only)' })
-  @ApiResponse({ status: 200, description: 'User updated', type: User })
   @ApiUpdateOperation(User)
+  @Roles(UserRole.ADMIN)
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
     return this.userService.update(id, dto);
   }
 
   // ACTIVATE (soft: set status=ACTIVE)
   @Patch(':id/activate')
-  @ApiOperation({ summary: 'Activate user (set status=ACTIVE)' })
   @ApiActivateOperation(User)
+  @Roles(UserRole.ADMIN)
   activate(@Param('id', ParseIntPipe) id: number) {
     return this.userService.activate(id);
   }
 
   // DELETE (soft: set status=INACTIVE)
   @Patch(':id/deactivate')
-  @ApiOperation({ summary: 'Deactivate user (set status=INACTIVE)' })
   @ApiDeactivateOperation(User)
+  @Roles(UserRole.ADMIN)
   deactivate(@Param('id', ParseIntPipe) id: number) {
     return this.userService.deactivate(id);
   }
@@ -135,6 +126,7 @@ export class UserController {
   // DELETE (remove user)
   @Delete(':id')
   @ApiDeleteOperation(User)
+  @Roles(UserRole.ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.userService.remove(id);
   }

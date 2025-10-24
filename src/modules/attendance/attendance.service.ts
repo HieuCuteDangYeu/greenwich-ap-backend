@@ -182,28 +182,6 @@ export class AttendanceService {
 
   // Additional helper methods
 
-  // Get attendance by student
-  async findByStudent(studentId: number): Promise<Attendance[]> {
-    const student = await this.studentRepo.findOne({
-      where: { id: studentId },
-    });
-    if (!student) {
-      throw new NotFoundException('Student not found');
-    }
-    return this.findAll({ studentId });
-  }
-
-  // Get attendance by session
-  async findBySession(sessionId: number): Promise<Attendance[]> {
-    const session = await this.sessionRepo.findOne({
-      where: { id: sessionId },
-    });
-    if (!session) {
-      throw new NotFoundException('Class session not found');
-    }
-    return this.findAll({ sessionId });
-  }
-
   // Get attendance statistics for a student
   async getStudentStats(studentId: number): Promise<{
     total: number;

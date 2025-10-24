@@ -6,6 +6,7 @@ import { User } from './entities/user.entity';
 import { Role } from './entities/role.entity';
 import { Campus } from './entities/campus.entity';
 import { Student } from '../student/entities/student.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserProfileDto } from './dto/user-profile.dto';
@@ -18,6 +19,8 @@ export class UserService {
     @InjectRepository(Campus) private readonly campusRepo: Repository<Campus>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
+    @InjectRepository(Staff)
+    private readonly staffRepo: Repository<Staff>,
   ) {}
 
   async create(dto: CreateUserDto): Promise<User> {
@@ -99,11 +102,98 @@ export class UserService {
     return u;
   }
 
+  /**
+   * Find user by ID with role-specific data (staff/student) eager loaded
+   * This prevents N+1 queries during JWT validation
+   */
+  async findOneWithRoleData(
+    id: number,
+  ): Promise<(User & { staff?: Staff; student?: Student }) | null> {
+    const user = await this.userRepo.findOne({
+      where: { id },
+      relations: ['role', 'campus'],
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return this.attachRoleSpecificData(user);
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepo.findOne({
       where: { email },
       relations: ['role', 'campus'],
     });
+  }
+
+  /**
+   * Find user by email with role-specific data (staff/student) eager loaded
+   * This prevents N+1 queries during authentication
+   */
+  async findByEmailWithRoleData(
+    email: string,
+  ): Promise<(User & { staff?: Staff; student?: Student }) | null> {
+    const user = await this.userRepo.findOne({
+      where: { email },
+      relations: ['role', 'campus'],
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return this.attachRoleSpecificData(user);
+  }
+
+  /**
+   * Find user by refresh token with role-specific data (staff/student) eager loaded
+   * This prevents N+1 queries during token refresh
+   */
+  async findByRefreshTokenWithRoleData(
+    refreshToken: string,
+  ): Promise<(User & { staff?: Staff; student?: Student }) | null> {
+    const user = await this.userRepo.findOne({
+      where: { refreshToken },
+      relations: ['role', 'campus'],
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return this.attachRoleSpecificData(user);
+  }
+
+  /**
+   * Helper method to attach role-specific data to a user
+   * Loads staff or student data based on user's role
+   */
+  private async attachRoleSpecificData(
+    user: User,
+  ): Promise<User & { staff?: Staff; student?: Student }> {
+    const userRole = user.role?.name.toUpperCase();
+    const enrichedUser = user as User & { staff?: Staff; student?: Student };
+
+    if (userRole === 'STAFF') {
+      const staff = await this.staffRepo.findOne({
+        where: { userId: user.id },
+        relations: ['role'],
+      });
+      if (staff) {
+        enrichedUser.staff = staff;
+      }
+    } else if (userRole === 'STUDENT') {
+      const student = await this.studentRepo.findOne({
+        where: { userId: user.id },
+      });
+      if (student) {
+        enrichedUser.student = student;
+      }
+    }
+
+    return enrichedUser;
   }
 
   async update(id: number, dto: UpdateUserDto): Promise<User> {
@@ -196,13 +286,6 @@ export class UserService {
     await this.userRepo.update(userId, {
       refreshToken,
       refreshTokenExpiresAt: expiresAt,
-    });
-  }
-
-  async findByRefreshToken(refreshToken: string): Promise<User | null> {
-    return this.userRepo.findOne({
-      where: { refreshToken },
-      relations: ['role', 'campus'],
     });
   }
 

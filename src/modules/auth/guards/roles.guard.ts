@@ -1,15 +1,21 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { ROLES_KEY } from '../../../common/decorators/roles.decorator';
 import { User } from '../../user/entities/user.entity';
+import { UserRole } from '../../../common/enums/roles.enum';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(ctx: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<string[]>(
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
       ROLES_KEY,
       [ctx.getHandler(), ctx.getClass()],
     );
@@ -18,18 +24,26 @@ export class RolesGuard implements CanActivate {
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
     const req = ctx.switchToHttp().getRequest<Request & { user?: User }>();
-
     const user = req.user;
 
     // Check if user exists and has a role
     if (!user || !user.role || !user.role.name) {
-      return false;
+      throw new ForbiddenException(
+        'User not authenticated or has no role assigned',
+      );
     }
 
-    const userRoleName = user.role.name.toLowerCase();
-    const requiredRolesLower = requiredRoles.map((r) => r.toLowerCase());
-    const hasPermission = requiredRolesLower.includes(userRoleName);
+    const userRoleName = user.role.name.toUpperCase();
+    const hasPermission = requiredRoles.some(
+      (role) => role.toString() === userRoleName,
+    );
 
-    return hasPermission;
+    if (!hasPermission) {
+      throw new ForbiddenException(
+        `Required roles: ${requiredRoles.join(', ')}`,
+      );
+    }
+
+    return true;
   }
 }

@@ -157,4 +157,11 @@ export class StaffService {
     const currentRole = await this.getStaffRole(staffId);
     return currentRole?.role === role;
   }
+
+  async findByUserId(userId: number): Promise<Staff | null> {
+    return this.staffRepo.findOne({
+      where: { userId },
+      relations: ['role'],
+    });
+  }
 }

@@ -12,8 +12,6 @@ import {
 import { ThreadService } from './thread.service';
 import { CreateThreadDto } from './dto/create-thread.dto';
 import { ThreadResponseDto } from './dto/thread-response.dto';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { AuthGuard } from '@nestjs/passport';
 import {
   ApiController,
   ApiCreateOperation,
@@ -22,15 +20,15 @@ import {
   ApiDeleteOperation,
 } from '../../common/decorators/swagger.decorator';
 import type { AuthenticatedRequest } from '../../common/types/authenticated-request.interface';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('threads')
 @ApiController('Threads', { requireAuth: true })
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 export class ThreadController {
   constructor(private readonly threadService: ThreadService) {}
 
   @Post()
-  @UseGuards(RolesGuard)
   @ApiCreateOperation(ThreadResponseDto, 'Create a new thread')
   async create(
     @Req() req: AuthenticatedRequest,
@@ -45,6 +43,17 @@ export class ThreadController {
     return this.threadService.findAll();
   }
 
+  @Get('user/:userId')
+  @ApiFindAllOperation(
+    ThreadResponseDto,
+    'Retrieve all threads related to a user',
+  )
+  async findUserThreads(
+    @Param('userId', ParseIntPipe) userId: number,
+  ): Promise<ThreadResponseDto[]> {
+    return this.threadService.findUserThreads(userId);
+  }
+
   @Get(':id')
   @ApiFindOneOperation(ThreadResponseDto, 'Retrieve a single thread by ID')
   async findOne(
@@ -54,7 +63,6 @@ export class ThreadController {
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
   @ApiDeleteOperation(ThreadResponseDto, 'Delete a thread by ID')
   async remove(
     @Req() req: AuthenticatedRequest,
