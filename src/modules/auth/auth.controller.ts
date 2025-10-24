@@ -91,7 +91,19 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.redirect(process.env.FRONTEND_URL || 'http://localhost:5173/');
+    const allowedRedirectUrls = [
+      'http://localhost:5173/',
+      'https://fgw-frontend.vercel.app',
+    ];
+
+    const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:5173/';
+
+    // Validate redirectUrl against allowlist
+    const safeRedirectUrl = allowedRedirectUrls.includes(redirectUrl)
+      ? redirectUrl
+      : 'http://localhost:5173/';
+
+    return res.redirect(safeRedirectUrl);
   }
 
   @Get('me')
