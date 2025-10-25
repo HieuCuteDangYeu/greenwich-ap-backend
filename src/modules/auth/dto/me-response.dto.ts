@@ -69,7 +69,19 @@ class StudentDto {
 
   @ApiProperty()
   @Expose()
-  academicYear: string;
+  startYear: string;
+
+  @ApiProperty()
+  @Expose()
+  endYear: string;
+
+  @ApiProperty()
+  @Expose()
+  startTerm: string;
+
+  @ApiProperty()
+  @Expose()
+  endTerm: string;
 }
 
 export class MeResponseDto {
@@ -83,11 +95,7 @@ export class MeResponseDto {
 
   @ApiProperty({ required: false })
   @Expose()
-  surname?: string;
-
-  @ApiProperty({ required: false })
-  @Expose()
-  givenName?: string;
+  fullname?: string;
 
   @ApiProperty({ required: false })
   @Expose()

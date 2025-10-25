@@ -14,7 +14,12 @@ import { GoogleUserDto } from './dto/google-user.dto';
 import { LoginResponseDto, RefreshResponseDto } from './dto/login-response.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { User } from '../user/entities/user.entity';
-import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 import {
   ApiController,
   CommonApiResponses,
@@ -82,6 +87,15 @@ export class AuthController {
   }
 
   @Post('exchange')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        code: { type: 'string', example: '4/0AfJohX...' },
+      },
+      required: ['code'],
+    },
+  })
   async exchangeCode(
     @Body() body: { code: string },
     @Res({ passthrough: true }) res: Response,
