@@ -21,7 +21,7 @@ import { GuardianModule } from './modules/guardian/guardian.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { TermModule } from './modules/term/term.module';
 import { AdminModule } from './modules/admin/admin.module';
-
+import { ProgrammeModule } from './modules/programme/programme.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -54,6 +54,7 @@ import { AdminModule } from './modules/admin/admin.module';
     GuardianModule,
     StaffModule,
     TermModule,
+    ProgrammeModule,
   ],
   controllers: [HealthController],
   providers: [],
