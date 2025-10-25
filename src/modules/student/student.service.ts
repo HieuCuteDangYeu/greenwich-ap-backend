@@ -11,10 +11,8 @@ import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Class } from '../class/entities/class.entity';
 import { UserStatus } from '../user/dto/update-user-status.dto';
-import { StudentProfileDto } from './dto/student-profile.dto';
 import { StaffService } from '../staff/staff.service';
 import { Staff } from '../staff/entities/staff.entity';
-import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class StudentService {
@@ -114,20 +112,6 @@ export class StudentService {
     return student;
   }
 
-  // GET Student Profile
-  async getStudentProfile(userId: number): Promise<StudentProfileDto> {
-    const student = await this.studentRepo.findOne({
-      where: { userId },
-      relations: ['user', 'mentor', 'user.campus'],
-    });
-
-    if (!student) throw new NotFoundException('Student profile not found');
-
-    return plainToInstance(StudentProfileDto, student, {
-      excludeExtraneousValues: true,
-    });
-  }
-
   // UPDATE
   async update(
     id: number,
@@ -169,8 +153,10 @@ export class StudentService {
 
     const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
       'faculty',
-      'year',
-      'term',
+      'startYear',
+      'endYear',
+      'startTerm',
+      'endTerm',
       'status',
     ];
 
@@ -221,6 +207,7 @@ export class StudentService {
     return { success: true };
   }
 
+  // Temporary
   private generateRandomStudentCode(length = 6): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';

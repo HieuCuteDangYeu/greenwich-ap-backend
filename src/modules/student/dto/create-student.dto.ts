@@ -76,18 +76,34 @@ export class CreateStudentDto {
   status?: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED';
 
   @ApiProperty({
-    description: 'Year',
+    description: 'Start year',
     example: '1',
   })
   @IsNotEmpty()
   @IsString()
-  year!: string;
+  startYear!: string;
 
   @ApiProperty({
-    description: 'Term',
+    description: 'End year',
+    example: '4',
+  })
+  @IsNotEmpty()
+  @IsString()
+  endYear!: string;
+
+  @ApiProperty({
+    description: 'Start term',
     example: 'Spring 2025',
   })
   @IsNotEmpty()
   @IsString()
-  term!: string;
+  startTerm!: string;
+
+  @ApiProperty({
+    description: 'End term',
+    example: 'Fall 2028',
+  })
+  @IsNotEmpty()
+  @IsString()
+  endTerm!: string;
 }

@@ -72,11 +72,19 @@ export class Student {
 
   @ApiProperty()
   @Column({ type: 'varchar', length: 20, nullable: false })
-  year!: string;
+  startYear!: string;
 
   @ApiProperty()
   @Column({ type: 'varchar', length: 20, nullable: false })
-  term!: string;
+  endYear!: string;
+
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  startTerm!: string;
+
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  endTerm!: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

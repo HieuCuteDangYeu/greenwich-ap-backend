@@ -7,8 +7,6 @@ import {
   Param,
   ParseIntPipe,
   UseGuards,
-  Req,
-  HttpStatus,
   Query,
 } from '@nestjs/common';
 import {
@@ -20,7 +18,7 @@ import {
   ApiUpdateOperation,
   ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -28,14 +26,8 @@ import { Student } from './entities/student.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { User } from '../user/entities/user.entity';
 import { UserRole } from '../../common/enums/roles.enum';
-import { StudentProfileDto } from './dto/student-profile.dto';
 import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
-
-interface JwtAuthRequest extends Request {
-  user?: User;
-}
 
 @ApiController('Students', { requireAuth: true })
 @Controller('students')
@@ -43,24 +35,6 @@ interface JwtAuthRequest extends Request {
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
-
-  // Student Profile
-  @Get('me')
-  @Roles(UserRole.STUDENT)
-  @ApiOperation({ summary: 'Get student profile' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Your profile',
-    type: StudentProfileDto,
-  })
-  async getStudentProfile(
-    @Req() req: JwtAuthRequest,
-  ): Promise<StudentProfileDto> {
-    if (!req.user) {
-      throw new Error('No authenticated user found');
-    }
-    return this.studentService.getStudentProfile(req.user.id);
-  }
 
   // ------------ ADMIN ONLY ------------
   // CREATE

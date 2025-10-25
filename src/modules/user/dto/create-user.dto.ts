@@ -16,7 +16,7 @@ export class CreateUserDto {
   @IsEmail()
   email!: string;
 
-  @SwaggerProperty({ description: 'Role id (existing role)', example: 2 })
+  @SwaggerProperty({ description: 'Role id (existing role)' })
   @IsNumber()
   roleId!: number;
 
