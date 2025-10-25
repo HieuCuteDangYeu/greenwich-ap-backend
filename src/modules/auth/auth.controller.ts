@@ -8,12 +8,18 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import type { Request } from 'express';
-import { GoogleUserDto } from './dto/google-user.dto';
-import { LoginResponseDto, RefreshResponseDto } from './dto/login-response.dto';
+import type { Response, Request } from 'express';
+import { plainToInstance } from 'class-transformer';
 import { AuthGuard } from '@nestjs/passport';
+import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
+import { GoogleUserDto } from './dto/google-user.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { User } from '../user/entities/user.entity';
+
 import {
   ApiOperation,
   ApiResponse,
@@ -24,13 +30,7 @@ import {
   ApiController,
   CommonApiResponses,
 } from '../../common/decorators/swagger.decorator';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
-import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import type { Response } from 'express';
-import { MeResponseDto } from './dto/me-response.dto';
-import { plainToInstance } from 'class-transformer';
+import { LoginResponseDto, RefreshResponseDto } from './dto/login-response.dto';
 
 interface GoogleAuthRequest extends Request {
   user?: GoogleUserDto;
@@ -45,20 +45,44 @@ interface JwtAuthRequest extends Request {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  private setAuthCookies(
+    res: Response,
+    tokens: { accessToken: string; refreshToken: string },
+  ) {
+    const isProd = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? ('none' as const) : ('lax' as const),
+    };
+
+    res.cookie('access_token', tokens.accessToken, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000, // 15 min
+    });
+    res.cookie('refresh_token', tokens.refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
   @Post('login')
   @ApiOperation({ summary: 'Login with email and password' })
-  @ApiResponse({
-    status: 200,
-    description: 'Login successful',
-    type: LoginResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Invalid credentials',
-  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @CommonApiResponses()
-  async login(@Body() loginDto: LoginDto): Promise<LoginResponseDto> {
-    return await this.authService.login(loginDto.email, loginDto.password);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<LoginResponseDto> {
+    const tokens = await this.authService.login(
+      loginDto.email,
+      loginDto.password,
+    );
+    this.setAuthCookies(res, tokens);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
   @Get('google')
@@ -66,7 +90,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Initiate Google OAuth login' })
   @CommonApiResponses()
   googleLogin(): void {
-    // passport will redirect
+    // Passport handles redirection
   }
 
   @Get('google/callback')
@@ -77,54 +101,39 @@ export class AuthController {
     @Req() req: GoogleAuthRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    if (!req.user || !req.user.email) {
-      throw new Error('Google authentication failed');
+    if (!req.user?.email) {
+      throw new UnauthorizedException('Google authentication failed');
     }
-    const authCode = await this.authService.createAuthCode(req.user);
 
+    const authCode = await this.authService.createAuthCode(req.user);
     const redirectUrl = `${process.env.FRONTEND_URL}/auth/bridge?code=${authCode}`;
     return res.redirect(redirectUrl);
   }
 
   @Post('exchange')
+  @ApiOperation({ summary: 'Exchange OAuth code for tokens' })
   @ApiBody({
     schema: {
       type: 'object',
-      properties: {
-        code: { type: 'string', example: '4/0AfJohX...' },
-      },
+      properties: { code: { type: 'string', example: '4/0AfJohX...' } },
       required: ['code'],
     },
   })
+  @CommonApiResponses()
   async exchangeCode(
     @Body() body: { code: string },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ message: string }> {
+  ): Promise<LoginResponseDto> {
     const userData = await this.authService.verifyAuthCode(body.code);
     if (!userData) {
       throw new UnauthorizedException('Invalid or expired code');
     }
 
     const tokens = await this.authService.handleGoogleLogin(userData);
-
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none' as const,
-      path: '/',
-    };
-
-    res.cookie('access_token', tokens.accessToken, {
-      ...cookieOptions,
-      maxAge: 15 * 60 * 1000,
-    });
-    res.cookie('refresh_token', tokens.refreshToken, {
-      ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
+    this.setAuthCookies(res, tokens);
     return {
-      message: 'Login successful, cookies set',
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     };
   }
 
@@ -139,10 +148,8 @@ export class AuthController {
   })
   @CommonApiResponses()
   me(@Req() req: JwtAuthRequest): MeResponseDto {
-    if (!req.user) {
-      throw new Error('No authenticated user found');
-    }
-
+    if (!req.user)
+      throw new UnauthorizedException('No authenticated user found');
     return plainToInstance(MeResponseDto, req.user, {
       excludeExtraneousValues: true,
     });
@@ -150,41 +157,34 @@ export class AuthController {
 
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
-  @ApiResponse({
-    status: 200,
-    description: 'Tokens refreshed successfully',
-    type: RefreshResponseDto,
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'Invalid or expired refresh token',
-  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   @CommonApiResponses()
   async refresh(
     @Body() refreshTokenDto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<RefreshResponseDto> {
-    return await this.authService.refreshTokens(refreshTokenDto);
+    const tokens = await this.authService.refreshTokens(refreshTokenDto);
+    this.setAuthCookies(res, tokens);
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Logout user and revoke refresh tokens' })
-  @ApiResponse({
-    status: 200,
-    description: 'Logout successful',
-  })
+  @ApiResponse({ status: 200, description: 'Logout successful' })
   @CommonApiResponses()
   async logout(
     @Req() req: JwtAuthRequest,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ message: string }> {
-    if (!req.user) {
-      throw new Error('No authenticated user found');
-    }
+    if (!req.user)
+      throw new UnauthorizedException('No authenticated user found');
 
     await this.authService.logout(req.user.id);
-
     res.clearCookie('access_token');
     res.clearCookie('refresh_token');
 
