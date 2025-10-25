@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Request } from 'express';
 import { User } from '../../user/entities/user.entity';
 import { AuthService } from '../auth.service';
 import { JwtPayload } from '../types/jwt-payload.type';
@@ -15,7 +16,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: Request): string => {
+          return req?.cookies?.access_token as string;
+        },
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ]),
       ignoreExpiration: false,
       secretOrKey: secret,
     });
@@ -33,8 +39,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       const user = await this.authService.validateUserByJwt(payload);
 
-      if (!user.role) {
-        throw new UnauthorizedException('User role not found');
+      if (!user || !user.role) {
+        throw new UnauthorizedException('Invalid or unauthorized user');
       }
 
       return user;
