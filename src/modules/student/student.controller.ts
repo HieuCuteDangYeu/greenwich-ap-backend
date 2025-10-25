@@ -18,7 +18,6 @@ import {
   ApiUpdateOperation,
   ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
-import { ApiBearerAuth } from '@nestjs/swagger';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -31,7 +30,6 @@ import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
 
 @ApiController('Students', { requireAuth: true })
 @Controller('students')
-@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class StudentController {
   constructor(private readonly studentService: StudentService) {}
