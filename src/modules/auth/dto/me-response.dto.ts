@@ -95,7 +95,7 @@ export class MeResponseDto {
 
   @ApiProperty({ required: false })
   @Expose()
-  fullname?: string;
+  fullName?: string;
 
   @ApiProperty({ required: false })
   @Expose()
