@@ -32,11 +32,11 @@ export class User {
 
   @ApiProperty()
   @Column({ name: 'campus_id', type: 'bigint', nullable: false })
-  campusId?: number;
+  campusId!: number;
 
   @ManyToOne(() => Campus, (c) => c.users, { eager: true, nullable: false })
   @JoinColumn({ name: 'campus_id' })
-  campus?: Campus;
+  campus!: Campus;
 
   @ApiProperty()
   @Column({ length: 190, unique: true })

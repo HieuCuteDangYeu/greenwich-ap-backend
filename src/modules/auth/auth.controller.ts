@@ -84,7 +84,7 @@ export class AuthController {
   @Post('exchange')
   async exchangeCode(
     @Body() body: { code: string },
-    @Res() res: Response,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ message: string }> {
     const userData = await this.authService.verifyAuthCode(body.code);
     if (!userData) {
