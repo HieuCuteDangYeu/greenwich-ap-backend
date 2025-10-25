@@ -191,8 +191,7 @@ export class AuthService {
       role: user.role?.name ?? null,
     };
 
-    if (user.surname) payload.surname = user.surname;
-    if (user.givenName) payload.givenName = user.givenName;
+    if (user.fullName) payload.fullName = user.fullName;
     if (user.avatar) payload.avatar = user.avatar;
 
     const userRole = user.role?.name.toUpperCase();

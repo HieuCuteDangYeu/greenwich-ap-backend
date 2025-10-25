@@ -10,6 +10,7 @@ import {
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../../user/entities/user.entity';
 import { Class } from '../../class/entities/class.entity';
+import { Staff } from '../../staff/entities/staff.entity';
 
 @Entity({ name: 'student' })
 export class Student {
@@ -34,23 +35,29 @@ export class Student {
   classId?: number | null;
 
   @ApiProperty()
-  @Column({ name: 'student_code', type: 'varchar', length: 30, unique: true })
+  @Column({
+    name: 'student_code',
+    type: 'varchar',
+    length: 30,
+    unique: true,
+    nullable: false,
+  })
   studentCode!: string;
 
   @ApiProperty({ description: 'Enrolment Day' })
-  @Column({ name: 'enrolment_day', type: 'date', nullable: true })
-  enrolmentDay?: Date;
+  @Column({ name: 'enrolment_day', type: 'date', nullable: false })
+  enrolmentDay!: Date;
 
-  @ApiProperty({ description: 'Mentor (User reference)', required: false })
+  @ApiProperty({ description: 'Mentor (Staff reference)', required: false })
   @Column({ name: 'mentor_id', type: 'bigint', nullable: true })
   mentorId?: number | null;
 
-  @ManyToOne(() => User, { eager: false, nullable: true })
+  @ManyToOne(() => Staff, { eager: false, nullable: true })
   @JoinColumn({ name: 'mentor_id' })
-  mentor?: User | null;
+  mentor?: Staff | null;
 
   @ApiProperty()
-  @Column({ type: 'varchar', length: 150, nullable: true })
+  @Column({ type: 'varchar', length: 150, nullable: false })
   faculty!: string;
 
   @ApiProperty({
@@ -64,13 +71,20 @@ export class Student {
   status!: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED' | 'OTHER';
 
   @ApiProperty()
-  @Column({
-    name: 'academic_year',
-    type: 'varchar',
-    length: 20,
-    nullable: true,
-  })
-  academicYear!: string;
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  startYear!: string;
+
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  endYear!: string;
+
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  startTerm!: string;
+
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  endTerm!: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

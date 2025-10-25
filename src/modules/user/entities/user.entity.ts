@@ -7,6 +7,8 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  BeforeInsert,
+  BeforeUpdate,
 } from 'typeorm';
 import { Role } from './role.entity';
 import { Campus } from './campus.entity';
@@ -29,12 +31,12 @@ export class User {
   role?: Role;
 
   @ApiProperty()
-  @Column({ name: 'campus_id', type: 'bigint', nullable: true })
-  campusId?: number | null;
+  @Column({ name: 'campus_id', type: 'bigint', nullable: false })
+  campusId!: number;
 
-  @ManyToOne(() => Campus, (c) => c.users, { eager: true, nullable: true })
+  @ManyToOne(() => Campus, (c) => c.users, { eager: true, nullable: false })
   @JoinColumn({ name: 'campus_id' })
-  campus?: Campus | null;
+  campus!: Campus;
 
   @ApiProperty()
   @Column({ length: 190, unique: true })
@@ -63,6 +65,19 @@ export class User {
   @ApiProperty({ name: 'given_name', required: false })
   @Column({ name: 'given_name', type: 'varchar', length: 80, nullable: true })
   givenName?: string | null;
+
+  @ApiProperty({ name: 'full_name', required: false })
+  @Column({ name: 'full_name', type: 'varchar', length: 80, nullable: true })
+  fullName?: string | null;
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  setFullName() {
+    this.fullName =
+      `${this.surname ?? ''} ${this.middleName ?? ''} ${this.givenName ?? ''}`
+        .replace(/\s+/g, ' ')
+        .trim() || null;
+  }
 
   @ApiProperty({ enum: ['MALE', 'FEMALE', 'OTHER', 'UNSPECIFIED'] })
   @Column({

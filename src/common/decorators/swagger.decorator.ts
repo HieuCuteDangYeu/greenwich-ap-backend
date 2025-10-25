@@ -220,6 +220,25 @@ export const ApiDeleteOperation = <T extends Type<unknown>>(
   );
 
 /**
+ * Standard Update Status operation decorator
+ */
+export const ApiUpdateStatusOperation = <T extends Type<unknown>>(
+  entity: T,
+  summary?: string,
+) =>
+  applyDecorators(
+    ApiOperation({
+      summary: summary || `Update ${entity.name.toLowerCase()} status`,
+    }),
+    ApiResponse({
+      status: HttpStatus.OK,
+      description: `Status has been successfully updated`,
+    }),
+    ApiNotFoundResponse({ description: `${entity.name} not found` }),
+    CommonApiResponses(),
+  );
+
+/**
  * Pagination query parameters
  */
 export const ApiPaginationQuery = () =>
@@ -290,54 +309,4 @@ export const ApiStudentFilterQuery = () =>
       required: false,
       type: String,
     }),
-  );
-
-/**
- * Standard Activate operation decorator
- */
-export const ApiActivateOperation = <T extends Type<unknown>>(
-  entity: T,
-  summary?: string,
-) =>
-  applyDecorators(
-    ApiOperation({
-      summary: summary || `Activate ${entity.name.toLowerCase()}`,
-    }),
-    ApiParam({
-      name: 'id',
-      description: `User ID`,
-      type: 'string',
-    }),
-    ApiResponse({
-      status: HttpStatus.OK,
-      description: `User has been successfully activated`,
-      type: entity,
-    }),
-    ApiNotFoundResponse({ description: `User ID not found to activate` }),
-    CommonApiResponses(),
-  );
-
-/**
- * Standard Deactivate operation decorator
- */
-export const ApiDeactivateOperation = <T extends Type<unknown>>(
-  entity: T,
-  summary?: string,
-) =>
-  applyDecorators(
-    ApiOperation({
-      summary: summary || `Deactivate ${entity.name.toLowerCase()}`,
-    }),
-    ApiParam({
-      name: 'id',
-      description: `User ID`,
-      type: 'string',
-    }),
-    ApiResponse({
-      status: HttpStatus.OK,
-      description: `User has been successfully deactivated`,
-      type: entity,
-    }),
-    ApiNotFoundResponse({ description: `User ID not found to deactivate` }),
-    CommonApiResponses(),
   );

@@ -9,8 +9,9 @@ import {
   HttpStatus,
   UseGuards,
   NotFoundException,
+  ParseIntPipe,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,7 +21,7 @@ import {
   ApiUpdateOperation,
   ApiFindOneOperation,
   ApiFindAllOperation,
-  ApiDeleteOperation,
+  ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
 import { Staff } from './entities/staff.entity';
 import { StaffService } from './staff.service';
@@ -29,11 +30,12 @@ import { UpdateStaffDto } from './dto/update-staff.dto';
 import { SetStaffRoleDto } from './dto/set-staff-role.dto';
 import { GetStaffRoleResponseDto } from './dto/get-staff-role-response.dto';
 import { UserRole } from '../../common/enums/roles.enum';
+import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
 
 @ApiController('Staffs', { requireAuth: true })
 @Controller('staffs')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 export class StaffController {
   constructor(private readonly staffService: StaffService) {}
 
@@ -42,33 +44,42 @@ export class StaffController {
   // =================
 
   @Post()
+  @Roles(UserRole.ADMIN)
   @ApiCreateOperation(Staff)
   create(@Body() dto: CreateStaffDto) {
     return this.staffService.create(dto);
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   @ApiFindAllOperation(Staff)
   findAll() {
     return this.staffService.findAll();
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN)
   @ApiFindOneOperation(Staff)
   findOne(@Param('id') id: string) {
     return this.staffService.findOne(+id);
   }
 
   @Patch(':id')
+  @Roles(UserRole.ADMIN)
   @ApiUpdateOperation(Staff)
   update(@Param('id') id: string, @Body() updateStaffDto: UpdateStaffDto) {
     return this.staffService.update(+id, updateStaffDto);
   }
 
-  @Delete(':id/status')
-  @ApiDeleteOperation(Staff)
-  remove(@Param('id') id: string) {
-    return this.staffService.deactivate(+id);
+  // DELETE (soft: set user status = INACTIVE)
+  @Patch(':id/status')
+  @Roles(UserRole.ADMIN)
+  @ApiUpdateStatusOperation(UpdateUserStatusDto, 'Update staff status')
+  async updateStaffStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: UpdateUserStatusDto,
+  ) {
+    return this.staffService.updateStaffStatus(id, body.status);
   }
 
   // =================
@@ -76,6 +87,7 @@ export class StaffController {
   // =================
 
   @Get(':id/role')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get staff role' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -92,12 +104,14 @@ export class StaffController {
   }
 
   @Post(':id/role')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Set or update staff role' })
   setRole(@Param('id') id: string, @Body() body: SetStaffRoleDto) {
     return this.staffService.setStaffRole(+id, body.role);
   }
 
   @Delete(':id/role')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Remove staff role' })
   removeRole(@Param('id') id: string) {
     return this.staffService.removeRole(+id);

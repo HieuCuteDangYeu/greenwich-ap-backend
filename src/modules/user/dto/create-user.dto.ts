@@ -16,11 +16,14 @@ export class CreateUserDto {
   @IsEmail()
   email!: string;
 
-  @SwaggerProperty({ description: 'Role id (existing role)', example: 2 })
+  @SwaggerProperty({ description: 'Role id (existing role)' })
   @IsNumber()
   roleId!: number;
 
-  @SwaggerProperty({ description: 'Campus id', required: false })
+  @SwaggerProperty({
+    description: 'Campus id',
+    example: '1',
+  })
   @IsOptional()
   @IsNumber()
   campusId?: number;
@@ -29,6 +32,11 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   givenName?: string;
+
+  @SwaggerProperty({ description: 'Middle name', required: false })
+  @IsOptional()
+  @IsString()
+  middleName?: string;
 
   @SwaggerProperty({ description: 'Surname', required: false })
   @IsOptional()
@@ -60,7 +68,11 @@ export class CreateUserDto {
   @IsString()
   note?: string;
 
-  @SwaggerProperty({ description: 'Date of birth', required: false })
+  @SwaggerProperty({
+    description: 'Date of birth',
+    example: '2025-09-01',
+    required: false,
+  })
   @IsOptional()
   @IsDateString()
   dateOfBirth?: string;
@@ -78,13 +90,4 @@ export class CreateUserDto {
     'UNSPECIFIED' as const,
   ])
   gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'UNSPECIFIED';
-
-  // --- Fields for Student ---
-  @IsOptional()
-  @IsString()
-  studentCode?: string;
-
-  @IsOptional()
-  @IsNumber()
-  mentorId?: number;
 }
