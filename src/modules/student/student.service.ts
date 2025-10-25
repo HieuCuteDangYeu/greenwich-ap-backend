@@ -33,8 +33,7 @@ export class StudentService {
   // CREATE
   async create(dto: CreateStudentDto): Promise<Student> {
     // Check student code
-    const studentCode =
-      dto.studentCode ?? `FGW${Date.now().toString().slice(-5)}`;
+    const studentCode = dto.studentCode ?? this.generateRandomStudentCode();
     const existing = await this.studentRepo.findOne({ where: { studentCode } });
     if (existing) throw new BadRequestException('Student code already exists');
 
@@ -220,5 +219,14 @@ export class StudentService {
     await this.userService.updateStatus(student.user.id, status);
     await this.studentRepo.save(student);
     return { success: true };
+  }
+
+  private generateRandomStudentCode(length = 6): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `FGW${result}`;
   }
 }
