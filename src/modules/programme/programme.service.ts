@@ -72,8 +72,7 @@ export class ProgrammeService {
       const saved = await this.repo.save(entity);
       return this.findOne(saved.id);
     } catch (error) {
-      this.handleUniqueViolation(error);
-      throw error;
+      throw this.mapUniqueViolation(error);
     }
   }
 
@@ -89,8 +88,7 @@ export class ProgrammeService {
       const saved = await this.repo.save(programme);
       return this.findOne(saved.id);
     } catch (error) {
-      this.handleUniqueViolation(error);
-      throw error;
+      throw this.mapUniqueViolation(error);
     }
   }
 
@@ -101,27 +99,30 @@ export class ProgrammeService {
         throw new NotFoundException('Programme not found');
       }
     } catch (error) {
-      this.handleForeignKeyViolation(error);
-      throw error;
+      throw this.mapForeignKeyViolation(error);
     }
 
     return { deleted: true };
   }
 
-  private handleUniqueViolation(error: unknown) {
+  private mapUniqueViolation(error: unknown): Error {
     const code = this.extractErrorCode(error);
     if (code === '23505') {
-      throw new ConflictException('Programme code already exists');
+      return new ConflictException('Programme code already exists');
     }
+
+    return this.normalizeError(error);
   }
 
-  private handleForeignKeyViolation(error: unknown) {
+  private mapForeignKeyViolation(error: unknown): Error {
     const code = this.extractErrorCode(error);
     if (code === '23503') {
-      throw new ConflictException(
+      return new ConflictException(
         'Programme cannot be deleted because it has related terms.',
       );
     }
+
+    return this.normalizeError(error);
   }
 
   private extractErrorCode(error: unknown): string | undefined {
@@ -133,5 +134,13 @@ export class ProgrammeService {
       return withCode.code ?? withCode.driverError?.code;
     }
     return undefined;
+  }
+
+  private normalizeError(error: unknown): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error('Unexpected database error');
   }
 }
