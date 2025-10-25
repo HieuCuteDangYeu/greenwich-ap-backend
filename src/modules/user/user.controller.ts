@@ -84,7 +84,7 @@ export class UserController {
   @Roles(UserRole.ADMIN)
   @ApiUpdateStatusOperation(UpdateUserStatusDto, 'Update user status')
   async updateUserStatus(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserStatusDto,
   ) {
     return this.userService.updateStatus(id, dto.status);

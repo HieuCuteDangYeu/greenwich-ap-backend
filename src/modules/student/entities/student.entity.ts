@@ -46,7 +46,7 @@ export class Student {
 
   @ApiProperty({ description: 'Enrolment Day' })
   @Column({ name: 'enrolment_day', type: 'date', nullable: false })
-  enrolmentDay?: Date;
+  enrolmentDay!: Date;
 
   @ApiProperty({ description: 'Mentor (Staff reference)', required: false })
   @Column({ name: 'mentor_id', type: 'bigint', nullable: true })
