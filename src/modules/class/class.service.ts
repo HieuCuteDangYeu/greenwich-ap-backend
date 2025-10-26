@@ -96,7 +96,7 @@ export class ClassService {
     const where: Record<string, any> = { class: { id: classId } };
 
     if (from && to) {
-      if (from > to) {
+      if (new Date(from) > new Date(to)) {
         throw new BadRequestException(
           'The "from" date must be earlier than or equal to the "to" date.',
         );
