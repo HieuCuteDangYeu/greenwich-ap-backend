@@ -7,7 +7,7 @@ import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Class } from './entities/class.entity';
-import { Repository } from 'typeorm';
+import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { AddCourseDto } from './dto/add-course.dto';
 import { ClassCourse } from './entities/class-course.entity';
 import { Course } from '../course/entities/course.entity';
@@ -89,9 +89,27 @@ export class ClassService {
     return this.classSessionRepository.save(newSession);
   }
 
-  findSessions(classId: number) {
+  findSessions(
+    classId: number,
+    { from, to }: { from?: string; to?: string } = {},
+  ) {
+    const where: Record<string, any> = { class: { id: classId } };
+
+    if (from && to) {
+      if (from > to) {
+        throw new BadRequestException(
+          'The "from" date must be earlier than or equal to the "to" date.',
+        );
+      }
+      where.dateOn = Between(from, to);
+    } else if (from) {
+      where.dateOn = MoreThanOrEqual(from);
+    } else if (to) {
+      where.dateOn = LessThanOrEqual(to);
+    }
+
     return this.classSessionRepository.find({
-      where: { class: { id: classId } },
+      where,
       relations: ['course', 'room'],
       order: { dateOn: 'ASC' },
     });

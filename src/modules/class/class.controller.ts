@@ -107,9 +107,25 @@ export class ClassController {
   }
 
   @ApiOperation({ summary: 'List sessions of a class' })
+  @ApiQuery({
+    name: 'from',
+    required: false,
+    description: 'Start date (inclusive) in YYYY-MM-DD format',
+    type: String,
+  })
+  @ApiQuery({
+    name: 'to',
+    required: false,
+    description: 'End date (inclusive) in YYYY-MM-DD format',
+    type: String,
+  })
   @Get(':id/sessions')
-  findSessions(@Param('id') id: string) {
-    return this.classService.findSessions(+id);
+  findSessions(
+    @Param('id') id: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.classService.findSessions(+id, { from, to });
   }
 
   @ApiOperation({ summary: 'Get a specific class session' })
