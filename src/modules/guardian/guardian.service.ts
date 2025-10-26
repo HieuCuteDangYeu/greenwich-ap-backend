@@ -7,6 +7,8 @@ import { UpdateGuardianDto } from './dto/update-guardian.dto';
 import { GuardianResponseDto } from './dto/guardian-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { User } from '../user/entities/user.entity';
+import { UserStatus } from '../user/dto/update-user-status.dto';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class GuardianService {
@@ -15,6 +17,7 @@ export class GuardianService {
     private readonly guardianRepo: Repository<Guardian>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly userService: UserService,
   ) {}
 
   private toResponse(entity: Guardian): GuardianResponseDto {
@@ -68,11 +71,29 @@ export class GuardianService {
     return this.toResponse(saved);
   }
 
-  async remove(id: number): Promise<{ success: boolean }> {
-    const guardian = await this.guardianRepo.delete(id);
-    if (guardian.affected === 0) {
-      throw new NotFoundException('User ID not found to remove');
+  // DELETE (soft: set user status = INACTIVE)
+  async updateGuardianStatus(
+    guardianId: number,
+    status: UserStatus,
+  ): Promise<{ success: true }> {
+    const guardian = await this.guardianRepo.findOne({
+      where: { id: guardianId },
+      relations: ['user'],
+    });
+
+    if (!guardian) {
+      throw new NotFoundException(`Guardian with ID ${guardianId} not found`);
     }
+
+    if (!guardian.user || !guardian.user.id) {
+      throw new NotFoundException(
+        `Related user not found for guardian ${guardianId}`,
+      );
+    }
+
+    // Call userService to update the user status
+    await this.userService.updateStatus(guardian.user.id, status);
+    await this.guardianRepo.save(guardian);
     return { success: true };
   }
 }

@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { UserStatus } from './dto/update-user-status.dto';
 import { Role } from './entities/role.entity';
 import { Campus } from './entities/campus.entity';
 import { Student } from '../student/entities/student.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserProfileDto } from './dto/user-profile.dto';
 
 @Injectable()
 export class UserService {
@@ -22,65 +26,46 @@ export class UserService {
     private readonly staffRepo: Repository<Staff>,
   ) {}
 
+  // CREATE
   async create(dto: CreateUserDto): Promise<User> {
-    const role = await this.roleRepo.findOne({ where: { id: dto.roleId } });
+    const [role, campus] = await Promise.all([
+      this.roleRepo.findOne({ where: { id: dto.roleId } }),
+      this.campusRepo.findOne({ where: { id: dto.campusId } }),
+    ]);
+
     if (!role) throw new NotFoundException('Role not found');
+    if (!campus) throw new NotFoundException('Campus not found');
 
-    const campus = dto.campusId
-      ? await this.campusRepo.findOne({ where: { id: dto.campusId } })
-      : null;
-    if (dto.campusId && !campus)
-      throw new NotFoundException('Campus not found');
+    // Check existing email
+    const existingEmail = await this.findByEmail(dto.email);
+    if (existingEmail) throw new BadRequestException('Email already exists');
 
-    const ent = this.userRepo.create({
+    const user = this.userRepo.create({
+      ...dto,
       roleId: role.id,
-      role,
-      campusId: campus ? campus.id : null,
-      campus: campus ?? null,
-      email: dto.email,
-      givenName: dto.givenName ?? null,
-      surname: dto.surname ?? null,
-      gender: dto.gender ?? 'UNSPECIFIED',
-    } as Partial<User>);
-
-    const savedUser = await this.userRepo.save(ent);
+      campusId: campus.id,
+    });
+    const saved = await this.userRepo.save(user);
 
     const fullUser = await this.userRepo.findOne({
-      where: { id: savedUser.id },
+      where: { id: saved.id },
       relations: ['role', 'campus'],
     });
-    if (!fullUser) {
-      throw new NotFoundException('User ID not found after creation');
-    }
+    if (!fullUser) throw new NotFoundException('User not found after creation');
 
-    if (role.name === 'Student') {
-      let mentor = null;
-      if (dto.mentorId) {
-        mentor = await this.userRepo.findOne({ where: { id: dto.mentorId } });
-        if (!mentor) throw new NotFoundException('Mentor not found');
-      }
-
-      const student = this.studentRepo.create({
-        user: fullUser,
-        studentCode: dto.studentCode ?? `GCS23000${savedUser.id}`,
-        mentor,
-      });
-      await this.studentRepo.save(student);
-    }
-
-    return fullUser ?? savedUser;
+    return fullUser;
   }
 
+  // READ all
   async findAll(opts?: { page?: number; limit?: number; search?: string }) {
     const qb = this.userRepo
       .createQueryBuilder('u')
       .leftJoinAndSelect('u.role', 'role')
       .leftJoinAndSelect('u.campus', 'campus');
     if (opts?.search) {
-      qb.where(
-        'u.email ILIKE :q OR u.givenName ILIKE :q OR u.surname ILIKE :q',
-        { q: `%${opts.search}%` },
-      );
+      qb.where('u.email ILIKE :q OR u.fullName ILIKE :q', {
+        q: `%${opts.search}%`,
+      });
     }
     qb.orderBy('u.createdAt', 'DESC');
     if (opts?.limit) qb.take(opts.limit);
@@ -89,6 +74,7 @@ export class UserService {
     return qb.getMany();
   }
 
+  // READ one
   async findOne(id: number): Promise<User> {
     const u = await this.userRepo.findOne({
       where: { id },
@@ -173,14 +159,30 @@ export class UserService {
     return enrichedUser;
   }
 
-  async update(id: number, dto: UpdateUserDto): Promise<User> {
+  async findRoleByName(name: string): Promise<Role> {
+    const role = await this.roleRepo.findOne({ where: { name } });
+    if (!role) throw new NotFoundException(`Role '${name}' not found`);
+    return role;
+  }
+
+  // UPDATE
+  async update(id: number, dto: UpdateUserDto): Promise<{ success: boolean }> {
     const user = await this.findOne(id);
+
+    if (dto.email && dto.email !== user.email) {
+      const existingUser = await this.userRepo.findOne({
+        where: { email: dto.email },
+      });
+      if (existingUser && existingUser.id !== id) {
+        throw new BadRequestException('Email already exists');
+      }
+    }
 
     if (dto.roleId) {
       const role = await this.roleRepo.findOne({ where: { id: dto.roleId } });
       if (!role) throw new NotFoundException('Role not found');
-      user.roleId = role.id;
       user.role = role;
+      user.roleId = dto.roleId;
     }
 
     if (dto.campusId) {
@@ -188,65 +190,63 @@ export class UserService {
         where: { id: dto.campusId },
       });
       if (!campus) throw new NotFoundException('Campus not found');
-      user.campusId = campus.id;
       user.campus = campus;
+      user.campusId = dto.campusId;
     }
 
-    if (dto.givenName !== undefined) user.givenName = dto.givenName ?? null;
-    if (dto.surname !== undefined) user.surname = dto.surname ?? null;
-    if (dto.gender !== undefined) user.gender = dto.gender;
-    if (dto.phone !== undefined) user.phone = dto.phone ?? null;
-    if (dto.phoneAlt !== undefined) user.phoneAlt = dto.phoneAlt ?? null;
-    if (dto.address !== undefined) user.address = dto.address ?? null;
-    if (dto.avatar !== undefined) user.avatar = dto.avatar ?? null;
-    if (dto.note !== undefined) user.note = dto.note ?? null;
+    const updateFields: (keyof UpdateUserDto)[] = [
+      'email',
+      'givenName',
+      'middleName',
+      'surname',
+      'gender',
+      'phone',
+      'phoneAlt',
+      'address',
+      'avatar',
+      'note',
+    ];
+
+    // Add temporary object with keyof UpdateUserDto and can have value string, number, null
+    const updates: Partial<
+      Record<keyof UpdateUserDto, string | number | null>
+    > = {};
+
+    updateFields.forEach((key) => {
+      const value = dto[key];
+      if (value !== undefined) {
+        updates[key] = value ?? null;
+      }
+    });
+
+    Object.assign(user, updates);
+
     if (dto.dateOfBirth !== undefined) {
       user.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : null;
     }
-    return this.userRepo.save(user);
+
+    await this.userRepo.save(user);
+    return { success: true };
   }
 
-  async updateProfile(userId: number, dto: UserProfileDto): Promise<User> {
-    const user = await this.userRepo.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new Error('User ID not found to update their profile');
-    }
+  // DELETE => Update User Status (ACTIVE, INACTIVE)
+  async updateStatus(
+    id: number,
+    status: UserStatus,
+  ): Promise<{ success: boolean }> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
 
-    if (dto.phone !== undefined) {
-      user.phone = dto.phone;
-    }
-    if (dto.avatar !== undefined) {
-      user.avatar = dto.avatar;
-    }
-
-    return this.userRepo.save(user);
-  }
-
-  // ACTIVATE (set status = ACTIVE)
-  async activate(id: number): Promise<User> {
-    const user = await this.userRepo.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-    user.status = 'ACTIVE';
-    return await this.userRepo.save(user);
-  }
-
-  // DELETE (soft: set status = INACTIVE)
-  async deactivate(id: number): Promise<User> {
-    const user = await this.userRepo.findOneBy({ id });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-    user.status = 'INACTIVE';
-    return await this.userRepo.save(user);
+    user.status = status;
+    await this.userRepo.save(user);
+    return { success: true };
   }
 
   // DELETE (remove user)
-  async remove(id: number): Promise<{ success: boolean }> {
+  async delete(id: number): Promise<{ success: boolean }> {
     const result = await this.userRepo.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException('User ID not found to remove');
+      throw new NotFoundException('User ID not found to delete');
     }
     return { success: true };
   }
@@ -298,11 +298,5 @@ export class UserService {
       })
       .where('refresh_token_expires_at <= :now', { now: new Date() })
       .execute();
-  }
-
-  async findRoleByName(name: string): Promise<Role> {
-    const role = await this.roleRepo.findOne({ where: { name } });
-    if (!role) throw new NotFoundException(`Role '${name}' not found`);
-    return role;
   }
 }

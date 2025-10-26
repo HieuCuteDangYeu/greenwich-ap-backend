@@ -5,32 +5,38 @@ import {
   IsEnum,
   IsDateString,
   IsNumber,
+  IsNotEmpty,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateUserDto } from '../../user/dto/create-user.dto';
 
 export class CreateStudentDto {
   @ApiProperty({
-    description: 'Reference to user account ID',
-    required: false,
+    description: 'User Info',
+    type: () => CreateUserDto,
   })
-  @IsOptional()
-  @IsNumber()
-  userId?: number;
+  @ValidateNested()
+  @Type(() => CreateUserDto)
+  @IsNotEmpty()
+  user!: CreateUserDto;
 
   @ApiProperty({
     description: 'Unique student code',
-    required: false,
+    required: true,
   })
+  @IsNotEmpty()
   @IsString()
-  studentCode?: string;
+  studentCode!: string;
 
   @ApiProperty({
     description: 'Enrolment Day',
-    required: false,
+    required: true,
     example: '2025-09-01',
   })
-  @IsOptional()
+  @IsNotEmpty()
   @IsDateString()
-  enrolmentDay?: string;
+  enrolmentDay!: string;
 
   @ApiProperty({
     description: 'Mentor ID',
@@ -53,10 +59,11 @@ export class CreateStudentDto {
   @ApiProperty({
     description: 'Faculty name',
     example: 'Computing',
-    required: false,
+    required: true,
   })
+  @IsNotEmpty()
   @IsString()
-  faculty?: string;
+  faculty!: string;
 
   @ApiProperty({
     description: 'Student status',
@@ -69,39 +76,34 @@ export class CreateStudentDto {
   status?: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED';
 
   @ApiProperty({
-    description: 'Academic year',
-    example: '2025-2026',
+    description: 'Start year',
+    example: '1',
   })
+  @IsNotEmpty()
   @IsString()
-  academicYear!: string;
-
-  // --- New user info if not having userID ---
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  email?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  password?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  givenName?: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  surname?: string;
+  startYear!: string;
 
   @ApiProperty({
-    description: 'Campus ID',
-    example: 1,
-    required: false,
+    description: 'End year',
+    example: '4',
   })
-  @IsOptional()
-  @IsNumber()
-  campusId?: number;
+  @IsNotEmpty()
+  @IsString()
+  endYear!: string;
+
+  @ApiProperty({
+    description: 'Start term',
+    example: 'Spring 2025',
+  })
+  @IsNotEmpty()
+  @IsString()
+  startTerm!: string;
+
+  @ApiProperty({
+    description: 'End term',
+    example: 'Fall 2028',
+  })
+  @IsNotEmpty()
+  @IsString()
+  endTerm!: string;
 }
