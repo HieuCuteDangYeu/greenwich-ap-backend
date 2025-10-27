@@ -160,9 +160,14 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
   @CommonApiResponses()
   async refresh(
-    @Body() refreshTokenDto: RefreshTokenDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<RefreshResponseDto> {
+    const refreshToken = req.cookies.refresh_token as string;
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found');
+    }
+    const refreshTokenDto = plainToInstance(RefreshTokenDto, { refreshToken });
     const tokens = await this.authService.refreshTokens(refreshTokenDto);
     this.setAuthCookies(res, tokens);
     return {
