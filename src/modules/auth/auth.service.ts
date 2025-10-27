@@ -17,6 +17,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan } from 'typeorm';
 import { TempAuthCode } from './entities/temp-auth-code.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { plainToInstance } from 'class-transformer';
+import { MeResponseDto } from './dto/me-response.dto';
 
 @Injectable()
 export class AuthService {
@@ -40,7 +42,7 @@ export class AuthService {
         throw new UnauthorizedException('Unable to login');
       }
 
-      const tokens = await this.generateTokens(user);
+      const tokens = this.generateTokens(user);
 
       await this.userService.updateRefreshToken(
         user.id,
@@ -51,6 +53,9 @@ export class AuthService {
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        user: plainToInstance(MeResponseDto, user, {
+          excludeExtraneousValues: true,
+        }),
       };
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -110,7 +115,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid email or password');
       }
 
-      const tokens = await this.generateTokens(user);
+      const tokens = this.generateTokens(user);
 
       await this.userService.updateRefreshToken(
         user.id,
@@ -121,6 +126,9 @@ export class AuthService {
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        user: plainToInstance(MeResponseDto, user, {
+          excludeExtraneousValues: true,
+        }),
       };
     } catch (err: unknown) {
       if (err instanceof UnauthorizedException) {
@@ -158,7 +166,7 @@ export class AuthService {
       }
 
       // Generate new tokens
-      const tokens = await this.generateTokens(user);
+      const tokens = this.generateTokens(user);
 
       // Store new refresh token in user_account
       await this.userService.updateRefreshToken(
@@ -179,38 +187,15 @@ export class AuthService {
     }
   }
 
-  private async generateTokens(
-    user: User & { staff?: Staff; student?: Student },
-  ): Promise<{
+  private generateTokens(user: User): {
     accessToken: string;
     refreshToken: string;
-  }> {
+  } {
     const payload: JwtPayload = {
       sub: user.id.toString(),
       email: user.email,
       role: user.role?.name ?? null,
     };
-
-    if (user.fullName) payload.fullName = user.fullName;
-    if (user.avatar) payload.avatar = user.avatar;
-
-    const userRole = user.role?.name.toUpperCase();
-    if (userRole === 'STAFF') {
-      const staff =
-        user.staff ?? (await this.staffService.findByUserId(user.id));
-      if (staff) {
-        payload.code = staff.staffCode;
-        if (staff.role?.role) {
-          payload.staffRole = staff.role.role;
-        }
-      }
-    } else if (userRole === 'STUDENT') {
-      const student =
-        user.student ?? (await this.studentService.findByUserId(user.id));
-      if (student) {
-        payload.code = student.studentCode;
-      }
-    }
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',

@@ -74,14 +74,17 @@ export class AuthController {
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
   ): Promise<LoginResponseDto> {
-    const tokens = await this.authService.login(
+    const data = await this.authService.login(
       loginDto.email,
       loginDto.password,
     );
-    this.setAuthCookies(res, tokens);
+    this.setAuthCookies(res, data);
     return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      user: plainToInstance(MeResponseDto, data.user, {
+        excludeExtraneousValues: true,
+      }),
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
     };
   }
 
@@ -129,11 +132,14 @@ export class AuthController {
       throw new UnauthorizedException('Invalid or expired code');
     }
 
-    const tokens = await this.authService.handleGoogleLogin(userData);
-    this.setAuthCookies(res, tokens);
+    const data = await this.authService.handleGoogleLogin(userData);
+    this.setAuthCookies(res, data);
     return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      user: plainToInstance(MeResponseDto, data.user, {
+        excludeExtraneousValues: true,
+      }),
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
     };
   }
 
