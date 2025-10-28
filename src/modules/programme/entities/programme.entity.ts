@@ -3,9 +3,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Term } from '../../term/entities/term.entity';
 
 @Entity({ name: 'programme' })
 export class Programme {
@@ -20,6 +22,10 @@ export class Programme {
   @ApiProperty()
   @Column({ length: 150 })
   name!: string;
+
+  @ApiProperty({ type: () => [Term], readOnly: true })
+  @OneToMany(() => Term, (term) => term.programme)
+  terms?: Term[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

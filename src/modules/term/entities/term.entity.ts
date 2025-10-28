@@ -31,7 +31,9 @@ export class Term {
   programmeId!: number;
 
   @ApiProperty({ type: () => Programme })
-  @ManyToOne(() => Programme, { nullable: false })
+  @ManyToOne(() => Programme, (programme) => programme.terms, {
+    nullable: false,
+  })
   @JoinColumn({ name: 'programme_id' })
   programme!: Programme;
 
