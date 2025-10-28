@@ -9,17 +9,17 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CreateUserDto } from '../../user/dto/create-user.dto';
+import { CreateStudentUserDto } from './create-student-user.dto';
 
 export class CreateStudentDto {
   @ApiProperty({
     description: 'User Info',
-    type: () => CreateUserDto,
+    type: () => CreateStudentUserDto,
   })
   @ValidateNested()
-  @Type(() => CreateUserDto)
+  @Type(() => CreateStudentUserDto)
   @IsNotEmpty()
-  user!: CreateUserDto;
+  user!: CreateStudentUserDto;
 
   @ApiProperty({
     description: 'Unique student code',
