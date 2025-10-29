@@ -116,7 +116,7 @@ export class CommentService {
 
     if (!thread) {
       throw new ForbiddenException(
-        'You do not have permission to view this thread',
+        'You must be the thread creator or tagged in this thread to view it.',
       );
     }
 

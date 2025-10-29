@@ -51,7 +51,7 @@ export class ThreadController {
     @Req() req: AuthenticatedRequest,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<ThreadResponseDto> {
-    return this.threadService.findOne(Number(id), req.user.id);
+    return this.threadService.findOne(id, req.user.id);
   }
 
   @Delete(':id')
