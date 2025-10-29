@@ -10,6 +10,8 @@ import { Student } from '../student/entities/student.entity';
 import { ClassSession } from '../class/entities/class-session.entity';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
+import { CreateBulkAttendanceDto } from './dto/create-bulk-attendance.dto';
+import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
 import {
   StudentScheduleResponseDto,
   StudentScheduleItemDto,
@@ -180,15 +182,179 @@ export class AttendanceService {
     return { deleted: true };
   }
 
+  // BULK CREATE - Create attendance for multiple students in one session
+  async createBulk(dto: CreateBulkAttendanceDto): Promise<{
+    created: Attendance[];
+    errors: Array<{ studentId: number; error: string }>;
+  }> {
+    // Verify session exists
+    const session = await this.sessionRepo.findOne({
+      where: { id: dto.sessionId },
+    });
+    if (!session) {
+      throw new NotFoundException('Class session not found');
+    }
+
+    const created: Attendance[] = [];
+    const errors: Array<{ studentId: number; error: string }> = [];
+
+    // Get all student IDs to verify they exist
+    const studentIds = dto.students.map((s) => s.studentId);
+    const students = await this.studentRepo
+      .createQueryBuilder('student')
+      .where('student.id IN (:...studentIds)', { studentIds })
+      .getMany();
+
+    // Convert bigint IDs to numbers for comparison
+    const studentMap = new Map(students.map((s) => [Number(s.id), s]));
+
+    // Get existing attendance records for this session
+    const existingAttendances = await this.attendanceRepo
+      .createQueryBuilder('attendance')
+      .where('attendance.sessionId = :sessionId', {
+        sessionId: dto.sessionId,
+      })
+      .andWhere('attendance.studentId IN (:...studentIds)', { studentIds })
+      .getMany();
+
+    const existingAttendanceMap = new Map(
+      existingAttendances.map((a) => [Number(a.studentId), true]),
+    );
+
+    // Process each student
+    for (const studentData of dto.students) {
+      const student = studentMap.get(studentData.studentId);
+
+      if (!student) {
+        errors.push({
+          studentId: studentData.studentId,
+          error: 'Student not found',
+        });
+        continue;
+      }
+
+      if (existingAttendanceMap.has(studentData.studentId)) {
+        errors.push({
+          studentId: studentData.studentId,
+          error:
+            'Attendance record already exists for this student in this session',
+        });
+        continue;
+      }
+
+      const attendance = this.attendanceRepo.create({
+        studentId: studentData.studentId,
+        sessionId: dto.sessionId,
+        status: studentData.status,
+        note: studentData.note,
+        student,
+        session,
+      });
+
+      created.push(attendance);
+    }
+
+    // Save all valid attendance records
+    if (created.length > 0) {
+      await this.attendanceRepo.save(created);
+    }
+
+    // If no records were created and there are errors, throw an exception
+    if (created.length === 0 && errors.length > 0) {
+      throw new BadRequestException({
+        message: 'Failed to create any attendance records',
+        errors,
+      });
+    }
+
+    return { created, errors };
+  }
+
+  // BULK UPDATE - Update attendance for multiple students in one session
+  async updateBulk(dto: UpdateBulkAttendanceDto): Promise<{
+    updated: Attendance[];
+    errors: Array<{ studentId: number; error: string }>;
+  }> {
+    // Verify session exists
+    const session = await this.sessionRepo.findOne({
+      where: { id: dto.sessionId },
+    });
+    if (!session) {
+      throw new NotFoundException('Class session not found');
+    }
+
+    const updated: Attendance[] = [];
+    const errors: Array<{ studentId: number; error: string }> = [];
+
+    // Get all student IDs
+    const studentIds = dto.students.map((s) => s.studentId);
+
+    // Get existing attendance records for this session and these students
+    const existingAttendances = await this.attendanceRepo
+      .createQueryBuilder('attendance')
+      .leftJoinAndSelect('attendance.student', 'student')
+      .leftJoinAndSelect('attendance.session', 'session')
+      .where('attendance.sessionId = :sessionId', {
+        sessionId: dto.sessionId,
+      })
+      .andWhere('attendance.studentId IN (:...studentIds)', { studentIds })
+      .getMany();
+
+    const attendanceMap = new Map(
+      existingAttendances.map((a) => [Number(a.studentId), a]),
+    );
+
+    // Process each student update
+    for (const studentData of dto.students) {
+      const attendance = attendanceMap.get(studentData.studentId);
+
+      if (!attendance) {
+        errors.push({
+          studentId: studentData.studentId,
+          error: 'Attendance record not found for this student in this session',
+        });
+        continue;
+      }
+
+      // Update fields if provided
+      if (studentData.status !== undefined) {
+        attendance.status = studentData.status;
+      }
+
+      if (studentData.note !== undefined) {
+        attendance.note = studentData.note;
+      }
+
+      updated.push(attendance);
+    }
+
+    // Save all updated attendance records
+    if (updated.length > 0) {
+      await this.attendanceRepo.save(updated);
+    }
+
+    // If no records were updated and there are errors, throw an exception
+    if (updated.length === 0 && errors.length > 0) {
+      throw new BadRequestException({
+        message: 'Failed to update any attendance records',
+        errors,
+      });
+    }
+
+    return { updated, errors };
+  }
+
   // Additional helper methods
 
   // Get attendance statistics for a student
-  async getStudentStats(studentId: number): Promise<{
+  async getStudentStats(
+    studentId: number,
+    courseId?: number,
+  ): Promise<{
     total: number;
     present: number;
     absent: number;
-    late: number;
-    excused: number;
+    pending: number;
     attendanceRate: number;
   }> {
     const student = await this.studentRepo.findOne({
@@ -198,23 +364,29 @@ export class AttendanceService {
       throw new NotFoundException('Student not found');
     }
 
-    const attendances = await this.attendanceRepo.find({
-      where: { studentId },
-    });
+    // Build query with optional course filter
+    const queryBuilder = this.attendanceRepo
+      .createQueryBuilder('attendance')
+      .leftJoin('attendance.session', 'session')
+      .where('attendance.studentId = :studentId', { studentId });
+
+    if (courseId) {
+      queryBuilder.andWhere('session.course_id = :courseId', { courseId });
+    }
+
+    const attendances = await queryBuilder.getMany();
 
     const total = attendances.length;
     const present = attendances.filter((a) => a.status === 'PRESENT').length;
     const absent = attendances.filter((a) => a.status === 'ABSENT').length;
-    const late = attendances.filter((a) => a.status === 'LATE').length;
-    const excused = attendances.filter((a) => a.status === 'EXCUSED').length;
+    const pending = attendances.filter((a) => a.status === 'PENDING').length;
     const attendanceRate = total > 0 ? (present / total) * 100 : 0;
 
     return {
       total,
       present,
       absent,
-      late,
-      excused,
+      pending,
       attendanceRate: parseFloat(attendanceRate.toFixed(2)),
     };
   }

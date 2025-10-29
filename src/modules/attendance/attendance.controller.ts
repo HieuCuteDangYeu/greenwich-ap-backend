@@ -22,6 +22,8 @@ import {
 import { AttendanceService } from './attendance.service';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
+import { CreateBulkAttendanceDto } from './dto/create-bulk-attendance.dto';
+import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
 import { Attendance } from './entities/attendance.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -46,6 +48,28 @@ export class AttendanceController {
     return this.attendanceService.create(dto);
   }
 
+  // BULK CREATE - Create attendance for multiple students
+  @Post('bulk')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @StaffRoles(StaffRole.TEACHER)
+  @ApiOperation({
+    summary: 'Create attendance records for multiple students in one session',
+  })
+  createBulk(@Body() dto: CreateBulkAttendanceDto) {
+    return this.attendanceService.createBulk(dto);
+  }
+
+  // BULK UPDATE - Update attendance for multiple students
+  @Patch('bulk')
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
+  @StaffRoles(StaffRole.TEACHER)
+  @ApiOperation({
+    summary: 'Update attendance records for multiple students in one session',
+  })
+  updateBulk(@Body() dto: UpdateBulkAttendanceDto) {
+    return this.attendanceService.updateBulk(dto);
+  }
+
   // READ all
   @Get()
   @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
@@ -67,7 +91,7 @@ export class AttendanceController {
     name: 'status',
     description: 'Filter by attendance status',
     required: false,
-    enum: ['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'],
+    enum: ['PRESENT', 'ABSENT', 'PENDING'],
   })
   @ApiQuery({
     name: 'classId',
@@ -166,7 +190,17 @@ export class AttendanceController {
   @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
   @StaffRoles(StaffRole.TEACHER)
   @ApiFindOneOperation(Attendance, 'Get attendance statistics for a student')
-  getStudentStats(@Param('studentId', ParseIntPipe) studentId: number) {
-    return this.attendanceService.getStudentStats(studentId);
+  @ApiQuery({
+    name: 'courseId',
+    description: 'Filter statistics by course ID (optional)',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  getStudentStats(
+    @Param('studentId', ParseIntPipe) studentId: number,
+    @Query('courseId') courseId?: number,
+  ) {
+    return this.attendanceService.getStudentStats(studentId, courseId);
   }
 }
