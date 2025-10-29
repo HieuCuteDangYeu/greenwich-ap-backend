@@ -11,12 +11,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Student } from '../../student/entities/student.entity';
 import { ClassSession } from '../../class/entities/class-session.entity';
 
-export const ATTENDANCE_STATUS = [
-  'PRESENT',
-  'ABSENT',
-  'LATE',
-  'EXCUSED',
-] as const;
+export const ATTENDANCE_STATUS = ['PRESENT', 'ABSENT', 'PENDING'] as const;
 
 export type AttendanceStatus = (typeof ATTENDANCE_STATUS)[number];
 
@@ -44,13 +39,14 @@ export class Attendance {
 
   @ApiProperty({
     enum: ATTENDANCE_STATUS,
-    description: 'Attendance status',
-    default: 'PRESENT',
+    description:
+      'Attendance status: PRESENT (attended), ABSENT (did not attend), PENDING (not yet recorded)',
+    default: 'PENDING',
   })
   @Column({
     type: 'enum',
     enum: ATTENDANCE_STATUS,
-    default: 'PRESENT',
+    default: 'PENDING',
   })
   status!: AttendanceStatus;
 
