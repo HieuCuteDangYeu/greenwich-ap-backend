@@ -53,7 +53,7 @@ export class CommentService {
         );
       }
 
-      let newlyTaggedUsers: any[] = [];
+      let newlyTaggedUsers: User[] = [];
       if (dto.taggedUserIds && dto.taggedUserIds.length > 0) {
         if (dto.taggedUserIds.map(Number).includes(Number(currentUserId))) {
           throw new ForbiddenException('You cannot tag yourself');
