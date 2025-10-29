@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, Brackets } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 import { Thread } from '../thread/entities/thread.entity';
 import { User } from '../user/entities/user.entity';
@@ -29,7 +29,7 @@ export class CommentService {
     return this.commentRepo.manager.transaction(async (manager) => {
       const thread = await manager.findOne(Thread, {
         where: { id: threadId },
-        relations: ['taggedUsers', 'createdBy'],
+        relations: ['createdBy'],
       });
       if (!thread) throw new NotFoundException('Thread not found');
 
@@ -38,16 +38,24 @@ export class CommentService {
       });
       if (!currentUser) throw new NotFoundException('User not found');
 
-      const isTagged = thread.taggedUsers.some((u) => u.id === currentUserId);
-      if (!isTagged) {
+      const isThreadCreator = thread.createdBy.id === currentUserId;
+      const isTagged = await manager
+        .getRepository(Comment)
+        .createQueryBuilder('comment')
+        .leftJoin('comment.taggedUsers', 'taggedUser')
+        .where('comment.thread.id = :threadId', { threadId })
+        .andWhere('taggedUser.id = :currentUserId', { currentUserId })
+        .getExists();
+
+      if (!isThreadCreator && !isTagged) {
         throw new ForbiddenException(
-          'You are not tagged in this thread and cannot comment',
+          'You must be the thread creator or previously tagged in this thread to post a comment.',
         );
       }
 
       let newlyTaggedUsers: User[] = [];
       if (dto.taggedUserIds && dto.taggedUserIds.length > 0) {
-        if (dto.taggedUserIds.includes(Number(currentUserId))) {
+        if (dto.taggedUserIds.map(Number).includes(Number(currentUserId))) {
           throw new ForbiddenException('You cannot tag yourself');
         }
 
@@ -57,7 +65,7 @@ export class CommentService {
 
         const foundIds = newlyTaggedUsers.map((u) => Number(u.id));
         const missingIds = dto.taggedUserIds.filter(
-          (id) => !foundIds.includes(id),
+          (id) => !foundIds.includes(Number(id)),
         );
         if (missingIds.length > 0) {
           throw new NotFoundException(
@@ -65,18 +73,6 @@ export class CommentService {
           );
         }
       }
-
-      const taggedUsersMap = new Map<number, User>();
-      for (const user of thread.taggedUsers) {
-        taggedUsersMap.set(user.id, user);
-      }
-      for (const user of newlyTaggedUsers) {
-        taggedUsersMap.set(user.id, user);
-      }
-      const mergedTaggedUsers = Array.from(taggedUsersMap.values());
-
-      thread.taggedUsers = mergedTaggedUsers;
-      await manager.save(Thread, thread);
 
       const comment = manager.create(Comment, {
         content: dto.content,
@@ -86,6 +82,7 @@ export class CommentService {
       });
 
       const savedComment = await manager.save(Comment, comment);
+
       const completeComment = await manager.findOne(Comment, {
         where: { id: savedComment.id },
         relations: ['createdBy', 'thread', 'taggedUsers'],
@@ -97,11 +94,31 @@ export class CommentService {
     });
   }
 
-  async findByThread(threadId: number): Promise<CommentResponseDto[]> {
-    const thread = await this.threadRepo.findOne({
-      where: { id: threadId },
-    });
-    if (!thread) throw new NotFoundException('Thread not found');
+  async findByThread(
+    currentUserId: number,
+    threadId: number,
+  ): Promise<CommentResponseDto[]> {
+    const thread = await this.threadRepo
+      .createQueryBuilder('thread')
+      .leftJoinAndSelect('thread.createdBy', 'createdBy')
+      .leftJoin('thread.comments', 'comments')
+      .leftJoin('comments.taggedUsers', 'taggedUsers')
+      .where('thread.id = :threadId', { threadId })
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('createdBy.id = :currentUserId', { currentUserId }).orWhere(
+            'taggedUsers.id = :currentUserId',
+            { currentUserId },
+          );
+        }),
+      )
+      .getOne();
+
+    if (!thread) {
+      throw new ForbiddenException(
+        'You must be the thread creator or tagged in this thread to view it.',
+      );
+    }
 
     const comments = await this.commentRepo.find({
       where: { thread: { id: threadId } },
@@ -117,20 +134,16 @@ export class CommentService {
   async deleteComment(currentUserId: number, commentId: number): Promise<void> {
     const comment = await this.commentRepo.findOne({
       where: { id: commentId },
-      relations: ['createdBy', 'thread', 'thread.createdBy'],
+      relations: ['createdBy', 'thread'],
     });
 
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
-
     const isCommentAuthor = comment.createdBy.id === currentUserId;
-    const isThreadAuthor = comment.thread.createdBy.id === currentUserId;
 
-    if (!isCommentAuthor && !isThreadAuthor) {
-      throw new ForbiddenException(
-        'You can only delete your own comments or comments in your threads',
-      );
+    if (!isCommentAuthor) {
+      throw new ForbiddenException('You can only delete your own comments');
     }
 
     await this.commentRepo.remove(comment);

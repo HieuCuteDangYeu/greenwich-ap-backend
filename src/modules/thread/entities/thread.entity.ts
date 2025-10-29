@@ -3,8 +3,6 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
-  ManyToMany,
-  JoinTable,
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
@@ -38,14 +36,6 @@ export class Thread {
     eager: true, // Auto-load the creator
   })
   createdBy: User;
-
-  @SwaggerProperty({
-    description: 'Users tagged in the thread',
-    type: () => [User],
-  })
-  @ManyToMany(() => User, { eager: true })
-  @JoinTable({ name: 'thread_tagged_users' })
-  taggedUsers: User[];
 
   @SwaggerProperty({
     description: 'Comments on the thread',
