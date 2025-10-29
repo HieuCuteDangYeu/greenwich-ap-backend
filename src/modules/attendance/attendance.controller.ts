@@ -199,7 +199,7 @@ export class AttendanceController {
   })
   getStudentStats(
     @Param('studentId', ParseIntPipe) studentId: number,
-    @Query('courseId') courseId?: number,
+    @Query('courseId', ParseIntPipe) courseId?: number,
   ) {
     return this.attendanceService.getStudentStats(studentId, courseId);
   }
