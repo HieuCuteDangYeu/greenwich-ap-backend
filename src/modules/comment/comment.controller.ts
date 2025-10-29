@@ -53,8 +53,11 @@ export class CommentController {
     description: 'ID of the thread containing the comments',
     type: 'string',
   })
-  async getThreadComments(@Param('threadId') threadId: string) {
-    return this.commentService.findByThread(Number(threadId));
+  async getThreadComments(
+    @Param('threadId') threadId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.commentService.findByThread(req.user.id, Number(threadId));
   }
 
   @Delete(':id')

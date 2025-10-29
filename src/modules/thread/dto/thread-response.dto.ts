@@ -23,9 +23,4 @@ export class ThreadResponseDto {
   @Type(() => UserResponseDto)
   @Expose()
   createdBy: UserResponseDto;
-
-  @ApiProperty()
-  @Type(() => UserResponseDto)
-  @Expose()
-  taggedUsers: UserResponseDto[];
 }

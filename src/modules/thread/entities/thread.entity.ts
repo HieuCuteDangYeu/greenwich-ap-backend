@@ -40,14 +40,6 @@ export class Thread {
   createdBy: User;
 
   @SwaggerProperty({
-    description: 'Users tagged in the thread',
-    type: () => [User],
-  })
-  @ManyToMany(() => User, { eager: true })
-  @JoinTable({ name: 'thread_tagged_users' })
-  taggedUsers: User[];
-
-  @SwaggerProperty({
     description: 'Comments on the thread',
     type: () => [Comment],
   })
