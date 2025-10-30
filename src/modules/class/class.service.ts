@@ -195,52 +195,41 @@ export class ClassService {
     programmeId?: number;
     termId?: number;
     departmentId?: number;
-  }) {
+  }): Promise<Class[]> {
     const qb = this.classRepository.createQueryBuilder('class');
 
-    // Apply filters if provided
-    let joinedCourse = false;
-    let joinedDepartment = false;
-    let joinedTerm = false;
-
-    if (opts?.departmentId) {
+    // Apply filters if any are provided
+    if (opts?.programmeId || opts?.termId || opts?.departmentId) {
       qb.innerJoin('class.classCourses', 'cc')
         .innerJoin('cc.course', 'course')
         .innerJoin('course.department', 'department');
-      joinedCourse = true;
-      joinedDepartment = true;
-      qb.andWhere('department.id = :departmentId', {
-        departmentId: opts.departmentId,
-      });
-      qb.distinct(true);
-    }
 
-    if (opts?.programmeId || opts?.termId) {
-      if (!joinedCourse) {
-        qb.innerJoin('class.classCourses', 'cc')
-          .innerJoin('cc.course', 'course')
-          .innerJoin('course.department', 'department');
-        joinedCourse = true;
-        joinedDepartment = true;
-      }
-      qb.innerJoin(
-        'term_department',
-        'td',
-        'td.department_id = department.id',
-      ).innerJoin('term', 'term', 'term.id = td.term_id');
-      joinedTerm = true;
-
-      if (opts.programmeId) {
-        qb.andWhere('term.programme_id = :programmeId', {
-          programmeId: opts.programmeId,
+      if (opts.departmentId) {
+        qb.andWhere('department.id = :departmentId', {
+          departmentId: opts.departmentId,
         });
       }
 
-      if (opts.termId) {
-        qb.andWhere('term.id = :termId', {
-          termId: opts.termId,
-        });
+      if (opts.programmeId || opts.termId) {
+        qb.innerJoin(
+          'term_department',
+          'td',
+          'td.department_id = department.id',
+        ).innerJoin('term', 'term', 'term.id = td.term_id');
+
+        if (opts.programmeId) {
+          qb.andWhere('term.programme_id = :programmeId', {
+            programmeId: opts.programmeId,
+          });
+        }
+
+        if (opts.termId) {
+          qb.andWhere('term.id = :termId', {
+            termId: opts.termId,
+          });
+        }
       }
+
       qb.distinct(true);
     }
 
