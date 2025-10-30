@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ClassService } from './class.service';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -44,9 +45,22 @@ export class ClassController {
   }
 
   @ApiFindAllOperation(Class)
+  @ApiQuery({ name: 'programmeId', required: false, type: Number })
+  @ApiQuery({ name: 'termId', required: false, type: Number })
+  @ApiQuery({ name: 'departmentId', required: false, type: Number })
   @Get()
-  findAll() {
-    return this.classService.findAll();
+  findAll(
+    @Query('programmeId', new ParseIntPipe({ optional: true }))
+    programmeId?: number,
+    @Query('termId', new ParseIntPipe({ optional: true })) termId?: number,
+    @Query('departmentId', new ParseIntPipe({ optional: true }))
+    departmentId?: number,
+  ) {
+    return this.classService.findAll({
+      programmeId,
+      termId,
+      departmentId,
+    });
   }
 
   @ApiFindOneOperation(Class)
