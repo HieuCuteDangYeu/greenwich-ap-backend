@@ -50,9 +50,11 @@ export class ClassController {
   @ApiQuery({ name: 'departmentId', required: false, type: Number })
   @Get()
   findAll(
-    @Query('programmeId', ParseIntPipe) programmeId?: number,
-    @Query('termId', ParseIntPipe) termId?: number,
-    @Query('departmentId', ParseIntPipe) departmentId?: number,
+    @Query('programmeId', new ParseIntPipe({ optional: true }))
+    programmeId?: number,
+    @Query('termId', new ParseIntPipe({ optional: true })) termId?: number,
+    @Query('departmentId', new ParseIntPipe({ optional: true }))
+    departmentId?: number,
   ) {
     return this.classService.findAll({
       programmeId,
