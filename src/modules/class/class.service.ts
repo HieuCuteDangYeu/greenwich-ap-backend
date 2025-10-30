@@ -16,9 +16,6 @@ import { ClassSession } from './entities/class-session.entity';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 import { Room } from '../room/entities/room.entity';
-import { Programme } from '../programme/entities/programme.entity';
-import { Term } from '../term/entities/term.entity';
-import { Department } from '../department/entities/department.entity';
 
 @Injectable()
 export class ClassService {
@@ -35,12 +32,6 @@ export class ClassService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
-    @InjectRepository(Programme)
-    private readonly programmeRepository: Repository<Programme>,
-    @InjectRepository(Term)
-    private readonly termRepository: Repository<Term>,
-    @InjectRepository(Department)
-    private readonly departmentRepository: Repository<Department>,
   ) {}
 
   create(createClassDto: CreateClassDto) {
@@ -205,34 +196,6 @@ export class ClassService {
     termId?: number;
     departmentId?: number;
   }) {
-    // Validate filters if provided
-    if (opts?.programmeId) {
-      const programmeExists = await this.programmeRepository.exists({
-        where: { id: opts.programmeId },
-      });
-      if (!programmeExists) {
-        throw new NotFoundException('Programme not found');
-      }
-    }
-
-    if (opts?.termId) {
-      const termExists = await this.termRepository.exists({
-        where: { id: opts.termId },
-      });
-      if (!termExists) {
-        throw new NotFoundException('Term not found');
-      }
-    }
-
-    if (opts?.departmentId) {
-      const departmentExists = await this.departmentRepository.exists({
-        where: { id: opts.departmentId },
-      });
-      if (!departmentExists) {
-        throw new NotFoundException('Department not found');
-      }
-    }
-
     const qb = this.classRepository.createQueryBuilder('class');
 
     // Apply filters if provided
