@@ -8,15 +8,41 @@ import { Repository } from 'typeorm';
 import { Department } from './entities/department.entity';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+import { Programme } from '../programme/entities/programme.entity';
 
 @Injectable()
 export class DepartmentService {
   constructor(
     @InjectRepository(Department) private repo: Repository<Department>,
+    @InjectRepository(Programme) private programmeRepo: Repository<Programme>,
   ) {}
 
-  async findAll(opts?: { page?: number; limit?: number; search?: string }) {
+  async findAll(opts?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    programmeId?: number;
+  }) {
+    // Validate programmeId exists if provided
+    if (opts?.programmeId) {
+      const programmeExists = await this.programmeRepo.exists({
+        where: { id: opts.programmeId },
+      });
+      if (!programmeExists) {
+        throw new NotFoundException('Programme not found');
+      }
+    }
+
     const qb = this.repo.createQueryBuilder('d');
+
+    if (opts?.programmeId) {
+      qb.innerJoin('term_department', 'td', 'td.department_id = d.id')
+        .innerJoin('term', 't', 't.id = td.term_id')
+        .andWhere('t.programme_id = :programmeId', {
+          programmeId: opts.programmeId,
+        })
+        .distinct(true);
+    }
 
     if (opts?.search) {
       qb.andWhere('(d.code ILIKE :q OR d.name ILIKE :q)', {
