@@ -51,15 +51,18 @@ export class DepartmentController {
   @ApiFindAllOperation(Department)
   @ApiPaginationQuery()
   @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'programmeId', required: false, type: Number })
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
     @Query('search') search?: string,
+    @Query('programmeId') programmeId?: number,
   ) {
     return this.svc.findAll({
       page: Number(page) || 1,
       limit: Number(limit) || 25,
       search,
+      programmeId: programmeId ? Number(programmeId) : undefined,
     });
   }
 
