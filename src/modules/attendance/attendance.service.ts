@@ -76,6 +76,7 @@ export class AttendanceService {
     sessionId?: number;
     status?: string;
     classId?: number;
+    courseId?: number;
   }): Promise<Attendance[]> {
     const qb = this.attendanceRepo
       .createQueryBuilder('a')
@@ -100,6 +101,12 @@ export class AttendanceService {
 
     if (filter?.classId) {
       qb.andWhere('session.class_id = :classId', { classId: filter.classId });
+    }
+
+    if (filter?.courseId) {
+      qb.andWhere('session.course_id = :courseId', {
+        courseId: filter.courseId,
+      });
     }
 
     return qb.getMany();
