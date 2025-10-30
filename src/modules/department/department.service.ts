@@ -23,15 +23,7 @@ export class DepartmentService {
     search?: string;
     programmeId?: number;
   }) {
-    // Validate programmeId exists if provided
-    if (opts?.programmeId) {
-      const programmeExists = await this.programmeRepo.exists({
-        where: { id: opts.programmeId },
-      });
-      if (!programmeExists) {
-        throw new NotFoundException('Programme not found');
-      }
-    }
+    // No explicit programme existence check; rely on join to return empty result if not found
 
     const qb = this.repo.createQueryBuilder('d');
 
