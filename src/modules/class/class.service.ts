@@ -230,7 +230,7 @@ export class ClassService {
         }
       }
 
-      qb.distinct(true);
+      qb.groupBy('class.id');
     }
 
     return qb.getMany();
