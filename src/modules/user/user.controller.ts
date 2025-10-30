@@ -48,7 +48,7 @@ export class UserController {
 
   // READ all
   @Get()
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.STAFF)
   @ApiFindAllOperation(User)
   @ApiPaginationQuery()
   findAll(

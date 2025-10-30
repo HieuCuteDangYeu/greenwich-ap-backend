@@ -8,15 +8,33 @@ import { Repository } from 'typeorm';
 import { Department } from './entities/department.entity';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+import { Programme } from '../programme/entities/programme.entity';
 
 @Injectable()
 export class DepartmentService {
   constructor(
     @InjectRepository(Department) private repo: Repository<Department>,
+    @InjectRepository(Programme) private programmeRepo: Repository<Programme>,
   ) {}
 
-  async findAll(opts?: { page?: number; limit?: number; search?: string }) {
+  async findAll(opts?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    programmeId?: number;
+  }) {
+    // No explicit programme existence check; rely on join to return empty result if not found
+
     const qb = this.repo.createQueryBuilder('d');
+
+    if (opts?.programmeId) {
+      qb.innerJoin('term_department', 'td', 'td.department_id = d.id')
+        .innerJoin('term', 't', 't.id = td.term_id')
+        .andWhere('t.programme_id = :programmeId', {
+          programmeId: opts.programmeId,
+        })
+        .distinctOn(['d.id']);
+    }
 
     if (opts?.search) {
       qb.andWhere('(d.code ILIKE :q OR d.name ILIKE :q)', {
