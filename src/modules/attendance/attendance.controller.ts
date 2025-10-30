@@ -99,17 +99,25 @@ export class AttendanceController {
     required: false,
     type: Number,
   })
+  @ApiQuery({
+    name: 'courseId',
+    description: 'Filter by course ID',
+    required: false,
+    type: Number,
+  })
   async findAll(
     @Query('studentId') studentId?: number,
     @Query('sessionId') sessionId?: number,
     @Query('status') status?: string,
     @Query('classId') classId?: number,
+    @Query('courseId') courseId?: number,
   ) {
     return this.attendanceService.findAll({
       studentId,
       sessionId,
       status,
       classId,
+      courseId,
     });
   }
 
