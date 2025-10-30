@@ -33,7 +33,7 @@ export class DepartmentService {
         .andWhere('t.programme_id = :programmeId', {
           programmeId: opts.programmeId,
         })
-        .distinct(true);
+        .distinctOn(['d.id']);
     }
 
     if (opts?.search) {
