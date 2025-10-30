@@ -16,6 +16,9 @@ import { ClassSession } from './entities/class-session.entity';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 import { Room } from '../room/entities/room.entity';
+import { Programme } from '../programme/entities/programme.entity';
+import { Term } from '../term/entities/term.entity';
+import { Department } from '../department/entities/department.entity';
 
 @Injectable()
 export class ClassService {
@@ -32,6 +35,12 @@ export class ClassService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+    @InjectRepository(Programme)
+    private readonly programmeRepository: Repository<Programme>,
+    @InjectRepository(Term)
+    private readonly termRepository: Repository<Term>,
+    @InjectRepository(Department)
+    private readonly departmentRepository: Repository<Department>,
   ) {}
 
   create(createClassDto: CreateClassDto) {
@@ -191,8 +200,77 @@ export class ClassService {
     return { deleted: true };
   }
 
-  findAll() {
-    return this.classRepository.find();
+  async findAll(opts?: {
+    programmeId?: number;
+    termId?: number;
+    departmentId?: number;
+  }) {
+    // Validate filters if provided
+    if (opts?.programmeId) {
+      const programmeExists = await this.programmeRepository.exists({
+        where: { id: opts.programmeId },
+      });
+      if (!programmeExists) {
+        throw new NotFoundException('Programme not found');
+      }
+    }
+
+    if (opts?.termId) {
+      const termExists = await this.termRepository.exists({
+        where: { id: opts.termId },
+      });
+      if (!termExists) {
+        throw new NotFoundException('Term not found');
+      }
+    }
+
+    if (opts?.departmentId) {
+      const departmentExists = await this.departmentRepository.exists({
+        where: { id: opts.departmentId },
+      });
+      if (!departmentExists) {
+        throw new NotFoundException('Department not found');
+      }
+    }
+
+    const qb = this.classRepository.createQueryBuilder('class');
+
+    // Apply filters if provided
+    if (opts?.programmeId || opts?.termId || opts?.departmentId) {
+      qb.innerJoin('class.classCourses', 'cc')
+        .innerJoin('cc.course', 'course')
+        .innerJoin('course.department', 'department');
+
+      if (opts.programmeId || opts.termId) {
+        qb.innerJoin(
+          'term_department',
+          'td',
+          'td.department_id = department.id',
+        ).innerJoin('term', 'term', 'term.id = td.term_id');
+
+        if (opts.programmeId) {
+          qb.andWhere('term.programme_id = :programmeId', {
+            programmeId: opts.programmeId,
+          });
+        }
+
+        if (opts.termId) {
+          qb.andWhere('term.id = :termId', {
+            termId: opts.termId,
+          });
+        }
+      }
+
+      if (opts.departmentId) {
+        qb.andWhere('department.id = :departmentId', {
+          departmentId: opts.departmentId,
+        });
+      }
+
+      qb.distinct(true);
+    }
+
+    return qb.getMany();
   }
 
   async findOne(id: number, relations: string[] = []) {

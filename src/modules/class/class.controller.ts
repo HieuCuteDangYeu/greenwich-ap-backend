@@ -44,9 +44,20 @@ export class ClassController {
   }
 
   @ApiFindAllOperation(Class)
+  @ApiQuery({ name: 'programmeId', required: false, type: Number })
+  @ApiQuery({ name: 'termId', required: false, type: Number })
+  @ApiQuery({ name: 'departmentId', required: false, type: Number })
   @Get()
-  findAll() {
-    return this.classService.findAll();
+  findAll(
+    @Query('programmeId') programmeId?: number,
+    @Query('termId') termId?: number,
+    @Query('departmentId') departmentId?: number,
+  ) {
+    return this.classService.findAll({
+      programmeId: programmeId ? Number(programmeId) : undefined,
+      termId: termId ? Number(termId) : undefined,
+      departmentId: departmentId ? Number(departmentId) : undefined,
+    });
   }
 
   @ApiFindOneOperation(Class)

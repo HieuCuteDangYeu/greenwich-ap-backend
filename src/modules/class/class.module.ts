@@ -8,10 +8,21 @@ import { ClassSession } from './entities/class-session.entity';
 import { CourseModule } from '../course/course.module';
 import { StudentModule } from '../student/student.module';
 import { Room } from '../room/entities/room.entity';
+import { Programme } from '../programme/entities/programme.entity';
+import { Term } from '../term/entities/term.entity';
+import { Department } from '../department/entities/department.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Class, ClassCourse, ClassSession, Room]),
+    TypeOrmModule.forFeature([
+      Class,
+      ClassCourse,
+      ClassSession,
+      Room,
+      Programme,
+      Term,
+      Department,
+    ]),
     CourseModule,
     StudentModule,
   ],
