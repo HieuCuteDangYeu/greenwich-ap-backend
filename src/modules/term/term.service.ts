@@ -78,7 +78,9 @@ export class TermService {
     const sortField = opts.sort || 'startDate';
     const allowedSortOrders = ['ASC', 'DESC'];
     const sortOrder =
-      opts.order && allowedSortOrders.includes(opts.order) ? opts.order : 'DESC';
+      opts.order && allowedSortOrders.includes(opts.order)
+        ? opts.order
+        : 'DESC';
 
     // Map sort field to actual column names
     const sortFieldMap: Record<string, string> = {
@@ -93,9 +95,7 @@ export class TermService {
 
     const mappedSortField = sortFieldMap[sortField] || 'term.start_date';
 
-    idQuery.select([
-      'term.id AS term_id',
-    ]);
+    idQuery.select(['term.id AS term_id']);
 
     idQuery
       .orderBy(mappedSortField, sortOrder)
