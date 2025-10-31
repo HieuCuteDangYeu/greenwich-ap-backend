@@ -75,7 +75,7 @@ export class TermService {
     const idQuery = baseQuery.clone().distinct(true);
 
     // Apply sorting
-    const sortField = opts.sort || 'start_date';
+    const sortField = opts.sort || 'startDate';
     const sortOrder = opts.order || 'DESC';
 
     // Map sort field to actual column names
