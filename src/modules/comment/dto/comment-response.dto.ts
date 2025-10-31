@@ -1,6 +1,7 @@
 import { Expose, Type } from 'class-transformer';
 import { SwaggerProperty } from 'src/common/decorators/swagger.decorator';
 import { UserResponseDto } from 'src/modules/user/dto/user-response.dto';
+import { Transform } from 'class-transformer';
 
 export class CommentResponseDto {
   @SwaggerProperty({ description: 'The unique ID of the comment.', example: 1 })
@@ -35,6 +36,7 @@ export class CommentResponseDto {
     description: 'Thread ID this comment belongs to.',
     example: 42,
   })
+  @Transform(({ obj }: { obj: { thread?: { id?: number } } }) => obj.thread?.id)
   @Expose()
   threadId: number;
 

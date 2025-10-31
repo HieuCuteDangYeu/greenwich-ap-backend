@@ -4,7 +4,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Brackets } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Comment } from './entities/comment.entity';
 import { Thread } from '../thread/entities/thread.entity';
 import { User } from '../user/entities/user.entity';
@@ -43,7 +43,7 @@ export class CommentService {
         .getRepository(Comment)
         .createQueryBuilder('comment')
         .leftJoin('comment.taggedUsers', 'taggedUser')
-        .where('comment.thread.id = :threadId', { threadId })
+        .where('comment.threadId = :threadId', { threadId })
         .andWhere('taggedUser.id = :currentUserId', { currentUserId })
         .getExists();
 
@@ -77,7 +77,7 @@ export class CommentService {
       const comment = manager.create(Comment, {
         content: dto.content,
         createdBy: currentUser,
-        thread,
+        thread: { id: threadId },
         taggedUsers: newlyTaggedUsers,
       });
 
@@ -88,7 +88,6 @@ export class CommentService {
         .createQueryBuilder('comment')
         .leftJoinAndSelect('comment.createdBy', 'createdBy')
         .leftJoinAndSelect('createdBy.role', 'createdByRole')
-        .leftJoinAndSelect('comment.thread', 'thread')
         .leftJoinAndSelect('comment.taggedUsers', 'taggedUsers')
         .leftJoinAndSelect('taggedUsers.role', 'taggedUserRole')
         .select([
@@ -121,17 +120,12 @@ export class CommentService {
   ): Promise<{ count: number; comments: CommentResponseDto[] }> {
     const thread = await this.threadRepo
       .createQueryBuilder('thread')
-      .leftJoinAndSelect('thread.createdBy', 'createdBy')
       .leftJoin('thread.comments', 'comments')
       .leftJoin('comments.taggedUsers', 'taggedUsers')
       .where('thread.id = :threadId', { threadId })
       .andWhere(
-        new Brackets((qb) => {
-          qb.where('createdBy.id = :currentUserId', { currentUserId }).orWhere(
-            'taggedUsers.id = :currentUserId',
-            { currentUserId },
-          );
-        }),
+        '(thread.createdById = :currentUserId OR taggedUsers.id = :currentUserId)',
+        { currentUserId },
       )
       .getOne();
 
@@ -144,7 +138,7 @@ export class CommentService {
     const comments = await this.commentRepo
       .createQueryBuilder('comment')
       .leftJoinAndSelect('comment.createdBy', 'createdBy')
-      .leftJoinAndSelect('comment.thread', 'thread')
+      .leftJoinAndSelect('createdBy.role', 'createdByRole')
       .leftJoinAndSelect('comment.taggedUsers', 'taggedUsers')
       .leftJoinAndSelect('taggedUsers.role', 'role')
       .select([
@@ -153,6 +147,8 @@ export class CommentService {
         'createdBy.fullName',
         'createdBy.email',
         'createdBy.avatar',
+        'createdByRole.id',
+        'createdByRole.name',
         'taggedUsers.id',
         'taggedUsers.fullName',
         'taggedUsers.email',
@@ -160,11 +156,13 @@ export class CommentService {
         'role.id',
         'role.name',
       ])
-      .where('thread.id = :threadId', { threadId })
+      .where('comment.threadId = :threadId', { threadId })
       .orderBy('comment.createdAt', 'ASC')
       .getMany();
 
-    const commentDtos = plainToInstance(CommentResponseDto, comments);
+    const commentDtos = plainToInstance(CommentResponseDto, comments, {
+      excludeExtraneousValues: true,
+    });
 
     return {
       count: commentDtos.length,
@@ -175,7 +173,7 @@ export class CommentService {
   async deleteComment(currentUserId: number, commentId: number): Promise<void> {
     const comment = await this.commentRepo.findOne({
       where: { id: commentId },
-      relations: ['createdBy', 'thread'],
+      relations: ['createdBy'],
     });
 
     if (!comment) {

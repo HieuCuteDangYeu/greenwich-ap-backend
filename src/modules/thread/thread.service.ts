@@ -25,6 +25,7 @@ export class ThreadService {
     const threads = await this.threadRepo
       .createQueryBuilder('thread')
       .leftJoinAndSelect('thread.createdBy', 'createdBy')
+      .leftJoinAndSelect('createdBy.role', 'createdByRole')
       .leftJoinAndSelect('thread.comments', 'comments')
       .leftJoinAndSelect('comments.taggedUsers', 'taggedUsers')
       .where(
@@ -51,6 +52,7 @@ export class ThreadService {
     const thread = await this.threadRepo
       .createQueryBuilder('thread')
       .leftJoinAndSelect('thread.createdBy', 'createdBy')
+      .leftJoinAndSelect('createdBy.role', 'createdByRole')
       .leftJoinAndSelect('thread.comments', 'comments')
       .leftJoinAndSelect('comments.taggedUsers', 'taggedUsers')
       .where('thread.id = :threadId', { threadId })
