@@ -42,7 +42,7 @@ export class ProgrammeService {
     }
 
     // Apply sorting
-    const sortField = opts.sort || 'created_at';
+    const sortField = opts.sort || 'createdAt';
     const sortOrder = opts.order || 'DESC';
 
     // Map sort field to actual column names
