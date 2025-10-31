@@ -78,7 +78,7 @@ export class ThreadService {
   async createThread(
     currentUserId: number,
     dto: CreateThreadDto,
-  ): Promise<Thread> {
+  ): Promise<ThreadResponseDto> {
     const user = await this.userRepo.findOne({
       where: { id: currentUserId },
     });
@@ -86,10 +86,15 @@ export class ThreadService {
 
     const thread = this.threadRepo.create({
       title: dto.title,
-      createdBy: { id: user.id },
+      content: dto.content,
+      createdBy: user,
     });
 
-    return this.threadRepo.save(thread);
+    const savedThread = await this.threadRepo.save(thread);
+
+    return plainToInstance(ThreadResponseDto, savedThread, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async deleteThread(

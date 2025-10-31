@@ -83,10 +83,31 @@ export class CommentService {
 
       const savedComment = await manager.save(Comment, comment);
 
-      const completeComment = await manager.findOne(Comment, {
-        where: { id: savedComment.id },
-        relations: ['createdBy', 'thread', 'taggedUsers'],
-      });
+      const completeComment = await manager
+        .getRepository(Comment)
+        .createQueryBuilder('comment')
+        .leftJoinAndSelect('comment.createdBy', 'createdBy')
+        .leftJoinAndSelect('createdBy.role', 'createdByRole')
+        .leftJoinAndSelect('comment.thread', 'thread')
+        .leftJoinAndSelect('comment.taggedUsers', 'taggedUsers')
+        .leftJoinAndSelect('taggedUsers.role', 'taggedUserRole')
+        .select([
+          'comment',
+          'createdBy.id',
+          'createdBy.fullName',
+          'createdBy.email',
+          'createdBy.avatar',
+          'createdByRole.id',
+          'createdByRole.name',
+          'taggedUsers.id',
+          'taggedUsers.fullName',
+          'taggedUsers.email',
+          'taggedUsers.avatar',
+          'taggedUserRole.id',
+          'taggedUserRole.name',
+        ])
+        .where('comment.id = :id', { id: savedComment.id })
+        .getOne();
 
       return plainToInstance(CommentResponseDto, completeComment, {
         excludeExtraneousValues: true,
@@ -97,7 +118,7 @@ export class CommentService {
   async findByThread(
     currentUserId: number,
     threadId: number,
-  ): Promise<CommentResponseDto[]> {
+  ): Promise<{ count: number; comments: CommentResponseDto[] }> {
     const thread = await this.threadRepo
       .createQueryBuilder('thread')
       .leftJoinAndSelect('thread.createdBy', 'createdBy')
@@ -120,15 +141,35 @@ export class CommentService {
       );
     }
 
-    const comments = await this.commentRepo.find({
-      where: { thread: { id: threadId } },
-      relations: ['createdBy', 'taggedUsers', 'thread'],
-      order: { createdAt: 'ASC' },
-    });
+    const comments = await this.commentRepo
+      .createQueryBuilder('comment')
+      .leftJoinAndSelect('comment.createdBy', 'createdBy')
+      .leftJoinAndSelect('comment.thread', 'thread')
+      .leftJoinAndSelect('comment.taggedUsers', 'taggedUsers')
+      .leftJoinAndSelect('taggedUsers.role', 'role')
+      .select([
+        'comment',
+        'createdBy.id',
+        'createdBy.fullName',
+        'createdBy.email',
+        'createdBy.avatar',
+        'taggedUsers.id',
+        'taggedUsers.fullName',
+        'taggedUsers.email',
+        'taggedUsers.avatar',
+        'role.id',
+        'role.name',
+      ])
+      .where('thread.id = :threadId', { threadId })
+      .orderBy('comment.createdAt', 'ASC')
+      .getMany();
 
-    return plainToInstance(CommentResponseDto, comments, {
-      excludeExtraneousValues: true,
-    });
+    const commentDtos = plainToInstance(CommentResponseDto, comments);
+
+    return {
+      count: commentDtos.length,
+      comments: commentDtos,
+    };
   }
 
   async deleteComment(currentUserId: number, commentId: number): Promise<void> {
@@ -140,6 +181,7 @@ export class CommentService {
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
+
     const isCommentAuthor = comment.createdBy.id === currentUserId;
 
     if (!isCommentAuthor) {

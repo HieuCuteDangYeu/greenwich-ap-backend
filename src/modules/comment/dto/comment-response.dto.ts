@@ -1,22 +1,6 @@
-import { Expose, Type, Transform } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import { SwaggerProperty } from 'src/common/decorators/swagger.decorator';
-
-class UserSummaryDto {
-  @SwaggerProperty({ description: "The user's unique ID.", example: 123 })
-  @Expose()
-  id: number;
-
-  @SwaggerProperty({ description: "The user's username.", example: 'jane_doe' })
-  @Expose()
-  username: string;
-
-  @SwaggerProperty({
-    description: "The user's email address.",
-    example: 'jane.doe@example.com',
-  })
-  @Expose()
-  email: string;
-}
+import { UserResponseDto } from 'src/modules/user/dto/user-response.dto';
 
 export class CommentResponseDto {
   @SwaggerProperty({ description: 'The unique ID of the comment.', example: 1 })
@@ -31,38 +15,37 @@ export class CommentResponseDto {
   content: string;
 
   @SwaggerProperty({
-    description: 'The user who created the comment.',
-    type: () => UserSummaryDto,
+    description: 'User who created the comment.',
+    type: () => UserResponseDto,
   })
   @Expose()
-  @Type(() => UserSummaryDto)
-  createdBy: UserSummaryDto;
+  @Type(() => UserResponseDto)
+  createdBy: UserResponseDto;
 
   @SwaggerProperty({
-    description: 'A list of users tagged in the comment.',
-    type: () => UserSummaryDto,
+    description: 'List of users tagged in the comment.',
+    type: () => UserResponseDto,
     isArray: true,
   })
   @Expose()
-  @Type(() => UserSummaryDto)
-  taggedUsers: UserSummaryDto[];
+  @Type(() => UserResponseDto)
+  taggedUsers: UserResponseDto[];
 
   @SwaggerProperty({
-    description: 'The ID of the thread this comment belongs to.',
+    description: 'Thread ID this comment belongs to.',
     example: 42,
   })
   @Expose()
-  @Transform(({ obj }: { obj: { thread?: { id?: number } } }) => obj.thread?.id)
   threadId: number;
 
   @SwaggerProperty({
-    description: 'The timestamp when the comment was created.',
+    description: 'Created date of the comment.',
   })
   @Expose()
   createdAt: Date;
 
   @SwaggerProperty({
-    description: 'The timestamp when the comment was last updated.',
+    description: 'Updated date of the comment.',
   })
   @Expose()
   updatedAt: Date;
