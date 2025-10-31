@@ -55,11 +55,15 @@ export class ProgrammeController {
     @Query('page', new ParseIntPipe({ optional: true })) page?: number,
     @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
     @Query('search') search?: string,
+    @Query('sort') sort?: string,
+    @Query('order') order?: 'ASC' | 'DESC',
   ) {
     return this.svc.findAll({
       page,
       limit,
       search,
+      sort,
+      order,
     });
   }
 

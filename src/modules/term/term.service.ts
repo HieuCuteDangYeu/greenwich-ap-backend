@@ -19,6 +19,8 @@ interface FindAllOptions {
   academicYear?: string;
   code?: string;
   name?: string;
+  sort?: string;
+  order?: 'ASC' | 'DESC';
 }
 
 @Injectable()
@@ -70,12 +72,33 @@ export class TermService {
       });
     }
 
-    const idQuery = baseQuery
-      .clone()
-      .select(['term.id AS term_id', 'term.start_date AS term_start_date'])
-      .distinct(true)
-      .orderBy('term.start_date', 'DESC')
-      .addOrderBy('term.id', 'DESC')
+    const idQuery = baseQuery.clone().distinct(true);
+
+    // Apply sorting
+    const sortField = opts.sort || 'start_date';
+    const sortOrder = opts.order || 'DESC';
+
+    // Map sort field to actual column names
+    const sortFieldMap: Record<string, string> = {
+      startDate: 'term.start_date',
+      endDate: 'term.end_date',
+      code: 'term.code',
+      name: 'term.name',
+      academicYear: 'term.academic_year',
+      createdAt: 'term.created_at',
+      id: 'term.id',
+    };
+
+    const mappedSortField = sortFieldMap[sortField] || 'term.start_date';
+
+    idQuery.select([
+      'term.id AS term_id',
+      `${mappedSortField} AS term_sort_field`,
+    ]);
+
+    idQuery
+      .orderBy(mappedSortField, sortOrder)
+      .addOrderBy('term.id', sortOrder)
       .skip((page - 1) * limit)
       .take(limit);
 
@@ -91,13 +114,18 @@ export class TermService {
       relations: ['programme', 'departments'],
     });
 
+    // Create a map to maintain the order from the sorted query
     const orderMap = new Map<number, number>(
       ids.map((id, index) => [id, index]),
     );
 
+    // Sort the terms according to the order from the first query
     return terms
       .slice()
-      .sort((a, b) => (orderMap.get(a.id) ?? 0) - (orderMap.get(b.id) ?? 0));
+      .sort(
+        (a, b) =>
+          (orderMap.get(Number(a.id)) ?? 0) - (orderMap.get(Number(b.id)) ?? 0),
+      );
   }
 
   async findOne(id: number) {
