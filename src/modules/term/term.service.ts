@@ -76,7 +76,9 @@ export class TermService {
 
     // Apply sorting
     const sortField = opts.sort || 'startDate';
-    const sortOrder = opts.order || 'DESC';
+    const allowedSortOrders = ['ASC', 'DESC'];
+    const sortOrder =
+      opts.order && allowedSortOrders.includes(opts.order) ? opts.order : 'DESC';
 
     // Map sort field to actual column names
     const sortFieldMap: Record<string, string> = {
