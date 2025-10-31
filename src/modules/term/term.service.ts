@@ -93,7 +93,6 @@ export class TermService {
 
     idQuery.select([
       'term.id AS term_id',
-      `${mappedSortField} AS term_sort_field`,
     ]);
 
     idQuery
