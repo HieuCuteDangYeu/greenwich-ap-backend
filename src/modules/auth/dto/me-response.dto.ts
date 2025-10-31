@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
 
-class RoleDto {
+export class RoleDto {
   @ApiProperty()
   @Expose()
   id: number;

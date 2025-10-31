@@ -13,6 +13,10 @@ export class ThreadResponseDto {
 
   @ApiProperty()
   @Expose()
+  content: string;
+
+  @ApiProperty()
+  @Expose()
   createdAt: Date;
 
   @ApiProperty()

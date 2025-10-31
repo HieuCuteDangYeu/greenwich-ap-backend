@@ -28,6 +28,13 @@ export class Thread {
   title: string;
 
   @SwaggerProperty({
+    description: 'The main content of the thread',
+    example: 'Here’s how to integrate NestJS with TypeORM step by step...',
+  })
+  @Column({ type: 'text' })
+  content: string;
+
+  @SwaggerProperty({
     description: 'The user who created the thread',
     type: () => User, // NestJS Swagger needs this for nested objects
   })
