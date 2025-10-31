@@ -43,7 +43,9 @@ export class ProgrammeService {
 
     // Apply sorting
     const sortField = opts.sort || 'createdAt';
-    const sortOrder = opts.order || 'DESC';
+    const allowedOrders = ['ASC', 'DESC'];
+    const sortOrder =
+      opts.order && allowedOrders.includes(opts.order) ? opts.order : 'DESC';
 
     // Map sort field to actual column names
     const sortFieldMap: Record<string, string> = {
