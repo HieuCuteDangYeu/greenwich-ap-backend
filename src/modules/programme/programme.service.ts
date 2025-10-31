@@ -13,6 +13,8 @@ interface FindAllOptions {
   page?: number;
   limit?: number;
   search?: string;
+  sort?: string;
+  order?: 'ASC' | 'DESC';
 }
 
 @Injectable()
@@ -39,8 +41,24 @@ export class ProgrammeService {
       });
     }
 
-    qb.orderBy('programme.created_at', 'DESC')
-      .addOrderBy('programme.id', 'DESC')
+    // Apply sorting
+    const sortField = opts.sort || 'createdAt';
+    const allowedOrders = ['ASC', 'DESC'];
+    const sortOrder =
+      opts.order && allowedOrders.includes(opts.order) ? opts.order : 'DESC';
+
+    // Map sort field to actual column names
+    const sortFieldMap: Record<string, string> = {
+      code: 'programme.code',
+      name: 'programme.name',
+      createdAt: 'programme.created_at',
+      updatedAt: 'programme.updated_at',
+      id: 'programme.id',
+    };
+
+    const mappedSortField = sortFieldMap[sortField] || 'programme.created_at';
+    qb.orderBy(mappedSortField, sortOrder)
+      .addOrderBy('programme.id', sortOrder)
       .skip((page - 1) * limit)
       .take(limit);
 

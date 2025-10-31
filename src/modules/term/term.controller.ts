@@ -61,6 +61,8 @@ export class TermController {
     @Query('academicYear') academicYear?: string,
     @Query('code') code?: string,
     @Query('name') name?: string,
+    @Query('sort') sort?: string,
+    @Query('order') order?: 'ASC' | 'DESC',
   ) {
     return this.svc.findAll({
       page,
@@ -70,6 +72,8 @@ export class TermController {
       academicYear,
       code,
       name,
+      sort,
+      order,
     });
   }
 
