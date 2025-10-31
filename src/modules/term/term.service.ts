@@ -5,11 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, In, Repository } from 'typeorm';
-import { Term } from './entities/term.entity';
-import { Programme } from '../programme/entities/programme.entity';
 import { Department } from '../department/entities/department.entity';
+import { Programme } from '../programme/entities/programme.entity';
 import { CreateTermDto } from './dto/create-term.dto';
 import { UpdateTermDto } from './dto/update-term.dto';
+import { Term } from './entities/term.entity';
 
 interface FindAllOptions {
   page?: number;
@@ -72,8 +72,6 @@ export class TermService {
       });
     }
 
-    const idQuery = baseQuery.clone().distinct(true);
-
     // Apply sorting
     const sortField = opts.sort || 'startDate';
     const allowedSortOrders = ['ASC', 'DESC'];
@@ -95,9 +93,10 @@ export class TermService {
 
     const mappedSortField = sortFieldMap[sortField] || 'term.start_date';
 
-    idQuery.select(['term.id AS term_id']);
-
-    idQuery
+    const idQuery = baseQuery
+      .clone()
+      .select(['term.id AS term_id', `${mappedSortField} AS sort_field`])
+      .distinct(true)
       .orderBy(mappedSortField, sortOrder)
       .addOrderBy('term.id', sortOrder)
       .skip((page - 1) * limit)
