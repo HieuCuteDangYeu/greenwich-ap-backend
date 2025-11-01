@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
-  IsEnum,
-  IsDateString,
-  IsNumber,
-  IsNotEmpty,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { UserInStudentDto } from './user-in-student.dto';
 
 export class CreateStudentDto {

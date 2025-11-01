@@ -1,16 +1,16 @@
 import {
-  Injectable,
   BadRequestException,
+  Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UserStatus } from '../user/dto/update-user-status.dto';
+import { UserService } from '../user/user.service';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { Staff } from './entities/staff.entity';
 import { StaffRole } from './entities/staff_role.entity';
-import { UserService } from '../user/user.service';
-import { UserStatus } from '../user/dto/update-user-status.dto';
 
 @Injectable()
 export class StaffService {

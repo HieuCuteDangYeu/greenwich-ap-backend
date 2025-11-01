@@ -1,14 +1,15 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
   ParseIntPipe,
-  UseGuards,
+  Patch,
+  Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
@@ -18,15 +19,14 @@ import {
   ApiUpdateOperation,
   ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
-import { StudentService } from './student.service';
+import { UserRole } from '../../common/enums/roles.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Student } from './entities/student.entity';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { UserRole } from '../../common/enums/roles.enum';
-import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
+import { StudentService } from './student.service';
 
 @ApiController('Students', { requireAuth: true })
 @Controller('students')

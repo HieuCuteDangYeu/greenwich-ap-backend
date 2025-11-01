@@ -1,14 +1,16 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
   ParseIntPipe,
-  UseGuards,
+  Patch,
+  Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
@@ -18,16 +20,14 @@ import {
   ApiUpdateOperation,
   ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
-import { ApiBearerAuth } from '@nestjs/swagger';
-import { Guardian } from './entities/guardian.entity';
-import { GuardianService } from './guardian.service';
-import { CreateGuardianDto } from './dto/create-guardian.dto';
-import { UpdateGuardianDto } from './dto/update-guardian.dto';
+import { UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../common/enums/roles.enum';
 import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
+import { CreateGuardianDto } from './dto/create-guardian.dto';
+import { UpdateGuardianDto } from './dto/update-guardian.dto';
+import { Guardian } from './entities/guardian.entity';
+import { GuardianService } from './guardian.service';
 
 @ApiController('Guardians', { requireAuth: true })
 @Controller('guardians')

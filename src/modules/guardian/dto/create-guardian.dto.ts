@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SwaggerProperty } from '../../../common/decorators/swagger.decorator';
+import { Type } from 'class-transformer';
 import {
   IsNotEmpty,
   IsOptional,
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { SwaggerProperty } from '../../../common/decorators/swagger.decorator';
 import { UserInGuardianDto } from './user-in-guardian.dto';
 
 export class CreateGuardianDto {

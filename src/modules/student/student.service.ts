@@ -1,18 +1,18 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Student } from './entities/student.entity';
+import { Class } from '../class/entities/class.entity';
+import { Staff } from '../staff/entities/staff.entity';
+import { StaffService } from '../staff/staff.service';
+import { UserStatus } from '../user/dto/update-user-status.dto';
 import { UserService } from '../user/user.service';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
-import { Class } from '../class/entities/class.entity';
-import { UserStatus } from '../user/dto/update-user-status.dto';
-import { StaffService } from '../staff/staff.service';
-import { Staff } from '../staff/entities/staff.entity';
+import { Student } from './entities/student.entity';
 
 @Injectable()
 export class StudentService {

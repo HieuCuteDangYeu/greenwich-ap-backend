@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
@@ -7,7 +8,6 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import { SetStaffRoleDto } from './set-staff-role.dto';
 import { UserInStaffDto } from './user-in-staff.dto';
 

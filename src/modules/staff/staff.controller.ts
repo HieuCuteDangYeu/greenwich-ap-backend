@@ -1,38 +1,38 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
   HttpStatus,
-  UseGuards,
   NotFoundException,
+  Param,
   ParseIntPipe,
+  Patch,
+  Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
   ApiController,
   ApiCreateOperation,
-  ApiUpdateOperation,
-  ApiFindOneOperation,
   ApiFindAllOperation,
-  ApiUpdateStatusOperation,
+  ApiFindOneOperation,
   ApiPaginationQuery,
+  ApiUpdateOperation,
+  ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
+import { UserRole } from '../../common/enums/roles.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
+import { CreateStaffDto } from './dto/create-staff.dto';
+import { GetStaffRoleResponseDto } from './dto/get-staff-role-response.dto';
+import { SetStaffRoleDto } from './dto/set-staff-role.dto';
+import { UpdateStaffDto } from './dto/update-staff.dto';
 import { Staff } from './entities/staff.entity';
 import { StaffService } from './staff.service';
-import { CreateStaffDto } from './dto/create-staff.dto';
-import { UpdateStaffDto } from './dto/update-staff.dto';
-import { SetStaffRoleDto } from './dto/set-staff-role.dto';
-import { GetStaffRoleResponseDto } from './dto/get-staff-role-response.dto';
-import { UserRole } from '../../common/enums/roles.enum';
-import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
 
 @ApiController('Staffs', { requireAuth: true })
 @Controller('staffs')
