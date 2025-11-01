@@ -1,6 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class DropThreadTaggedUsers1730200000000 implements MigrationInterface {
+export class DropThreadTaggedUsers1770000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Drop foreign keys first
     await queryRunner.query(`
