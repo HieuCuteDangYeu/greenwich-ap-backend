@@ -1,21 +1,21 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Attendance } from './entities/attendance.entity';
-import { Student } from '../student/entities/student.entity';
 import { ClassSession } from '../class/entities/class-session.entity';
+import { Student } from '../student/entities/student.entity';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
-import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { CreateBulkAttendanceDto } from './dto/create-bulk-attendance.dto';
-import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
 import {
-  StudentScheduleResponseDto,
   StudentScheduleItemDto,
+  StudentScheduleResponseDto,
 } from './dto/student-schedule-response.dto';
+import { UpdateAttendanceDto } from './dto/update-attendance.dto';
+import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
+import { Attendance } from './entities/attendance.entity';
 
 @Injectable()
 export class AttendanceService {
@@ -353,49 +353,131 @@ export class AttendanceService {
 
   // Additional helper methods
 
-  // Get attendance statistics for a student
+  // Get attendance statistics for students
   async getStudentStats(
-    studentId: number,
+    studentId?: number,
     courseId?: number,
-  ): Promise<{
-    total: number;
-    present: number;
-    absent: number;
-    pending: number;
-    attendanceRate: number;
-  }> {
-    const student = await this.studentRepo.findOne({
-      where: { id: studentId },
-    });
-    if (!student) {
-      throw new NotFoundException('Student not found');
+    classId?: number,
+  ): Promise<
+    | {
+        total: number;
+        present: number;
+        absent: number;
+        pending: number;
+        attendanceRate: number;
+      }
+    | Array<{
+        studentId: number;
+        studentCode: string;
+        studentName: string;
+        total: number;
+        present: number;
+        absent: number;
+        pending: number;
+        attendanceRate: number;
+      }>
+  > {
+    // If studentId is provided, return stats for that student only
+    if (studentId) {
+      const student = await this.studentRepo.findOne({
+        where: { id: studentId },
+      });
+      if (!student) {
+        throw new NotFoundException('Student not found');
+      }
+
+      const queryBuilder = this.attendanceRepo
+        .createQueryBuilder('attendance')
+        .leftJoin('attendance.session', 'session')
+        .where('attendance.studentId = :studentId', { studentId });
+
+      if (courseId) {
+        queryBuilder.andWhere('session.course_id = :courseId', { courseId });
+      }
+
+      const attendances = await queryBuilder.getMany();
+
+      const total = attendances.length;
+      const present = attendances.filter((a) => a.status === 'PRESENT').length;
+      const absent = attendances.filter((a) => a.status === 'ABSENT').length;
+      const pending = attendances.filter((a) => a.status === 'PENDING').length;
+      const attendanceRate = total > 0 ? (present / total) * 100 : 0;
+
+      return {
+        total,
+        present,
+        absent,
+        pending,
+        attendanceRate: parseFloat(attendanceRate.toFixed(2)),
+      };
     }
 
-    // Build query with optional course filter
-    const queryBuilder = this.attendanceRepo
+    // Otherwise return stats for all students with optional filters
+    const studentQuery = this.studentRepo
+      .createQueryBuilder('student')
+      .leftJoinAndSelect('student.user', 'user');
+
+    if (classId) {
+      studentQuery.andWhere('student.class_id = :classId', { classId });
+    }
+
+    const students = await studentQuery.getMany();
+
+    if (students.length === 0) {
+      return [];
+    }
+
+    const studentIds = students.map((s) => s.id);
+
+    // Get all attendances for these students
+    const attendanceQuery = this.attendanceRepo
       .createQueryBuilder('attendance')
       .leftJoin('attendance.session', 'session')
-      .where('attendance.studentId = :studentId', { studentId });
+      .where('attendance.studentId IN (:...studentIds)', { studentIds });
 
     if (courseId) {
-      queryBuilder.andWhere('session.course_id = :courseId', { courseId });
+      attendanceQuery.andWhere('session.course_id = :courseId', { courseId });
     }
 
-    const attendances = await queryBuilder.getMany();
+    const attendances = await attendanceQuery.getMany();
 
-    const total = attendances.length;
-    const present = attendances.filter((a) => a.status === 'PRESENT').length;
-    const absent = attendances.filter((a) => a.status === 'ABSENT').length;
-    const pending = attendances.filter((a) => a.status === 'PENDING').length;
-    const attendanceRate = total > 0 ? (present / total) * 100 : 0;
+    // Group attendances by studentId
+    const attendancesByStudent = new Map<number, typeof attendances>();
+    attendances.forEach((att) => {
+      const studentId = Number(att.studentId);
+      if (!attendancesByStudent.has(studentId)) {
+        attendancesByStudent.set(studentId, []);
+      }
+      attendancesByStudent.get(studentId)!.push(att);
+    });
 
-    return {
-      total,
-      present,
-      absent,
-      pending,
-      attendanceRate: parseFloat(attendanceRate.toFixed(2)),
-    };
+    // Calculate stats for each student
+    return students.map((student) => {
+      const studentAttendances =
+        attendancesByStudent.get(Number(student.id)) || [];
+      const total = studentAttendances.length;
+      const present = studentAttendances.filter(
+        (a) => a.status === 'PRESENT',
+      ).length;
+      const absent = studentAttendances.filter(
+        (a) => a.status === 'ABSENT',
+      ).length;
+      const pending = studentAttendances.filter(
+        (a) => a.status === 'PENDING',
+      ).length;
+      const attendanceRate = total > 0 ? (present / total) * 100 : 0;
+
+      return {
+        studentId: Number(student.id),
+        studentCode: student.studentCode,
+        studentName: student.user?.fullName || '',
+        total,
+        present,
+        absent,
+        pending,
+        attendanceRate: parseFloat(attendanceRate.toFixed(2)),
+      };
+    });
   }
 
   // Get student schedule with attendance for a date range
