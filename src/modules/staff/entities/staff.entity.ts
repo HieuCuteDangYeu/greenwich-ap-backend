@@ -2,9 +2,11 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  OneToOne,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../../user/entities/user.entity';
@@ -24,20 +26,30 @@ export class Staff {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @OneToOne(() => StaffRole, (r) => r.staff, { eager: true })
-  role?: StaffRole;
+  @OneToOne(() => StaffRole, (role) => role.staff, {
+    nullable: true,
+    eager: true,
+  })
+  @JoinColumn({ referencedColumnName: 'staffId' })
+  role?: StaffRole | null;
 
   @ApiProperty()
-  @Column({ name: 'staff_code', type: 'varchar', length: 30, unique: true })
+  @Column({
+    name: 'staff_code',
+    type: 'varchar',
+    length: 30,
+    unique: true,
+    nullable: false,
+  })
   staffCode!: string;
 
   @ApiProperty({ description: 'Hire Date' })
-  @Column({ name: 'hire_date', type: 'date', nullable: true })
-  hireDate?: Date;
+  @Column({ name: 'hire_date', type: 'timestamp', nullable: false })
+  hireDate!: Date;
 
   @ApiProperty({ description: 'End Date' })
-  @Column({ name: 'end_date', type: 'date', nullable: true })
-  endDate?: Date;
+  @Column({ name: 'end_date', type: 'timestamp', nullable: true })
+  endDate?: Date | null;
 
   @ApiProperty({
     enum: ['ACTIVE', 'INACTIVE', 'SABBATICAL', 'LEFT'],
@@ -57,4 +69,10 @@ export class Staff {
     nullable: true,
   })
   notes?: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
 }

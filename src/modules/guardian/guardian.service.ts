@@ -4,9 +4,6 @@ import { Repository } from 'typeorm';
 import { Guardian } from './entities/guardian.entity';
 import { CreateGuardianDto } from './dto/create-guardian.dto';
 import { UpdateGuardianDto } from './dto/update-guardian.dto';
-import { GuardianResponseDto } from './dto/guardian-response.dto';
-import { plainToInstance } from 'class-transformer';
-import { User } from '../user/entities/user.entity';
 import { UserStatus } from '../user/dto/update-user-status.dto';
 import { UserService } from '../user/user.service';
 
@@ -15,60 +12,96 @@ export class GuardianService {
   constructor(
     @InjectRepository(Guardian)
     private readonly guardianRepo: Repository<Guardian>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+
     private readonly userService: UserService,
   ) {}
 
-  private toResponse(entity: Guardian): GuardianResponseDto {
-    return plainToInstance(GuardianResponseDto, entity, {
-      excludeExtraneousValues: true,
+  // CREATE
+  async create(dto: CreateGuardianDto): Promise<Guardian> {
+    // Create new user
+    const user = await this.userService.create({
+      ...dto.user,
+      roleId: (await this.userService.findRoleByName('Guardian')).id,
     });
+
+    // Create new guardian
+    try {
+      const guardian = this.guardianRepo.create({
+        ...dto,
+        user,
+      });
+      return await this.guardianRepo.save(guardian);
+    } catch (error) {
+      await this.userService.delete(user.id);
+      throw error;
+    }
   }
 
-  private async findEntityById(id: number): Promise<Guardian> {
+  // READ all with filters
+  async findAll(opts?: { page?: number; limit?: number; search?: string }) {
+    const qb = this.guardianRepo
+      .createQueryBuilder('g')
+      .leftJoinAndSelect('g.user', 'u')
+      .leftJoinAndSelect('u.campus', 'campus');
+
+    // Search by guardian's full name, email, or occupation
+    if (opts?.search) {
+      qb.where('u.fullName ILIKE :q OR u.email ILIKE :q', {
+        q: `%${opts.search}%`,
+      });
+    }
+
+    qb.orderBy('g.createdAt', 'DESC');
+
+    // Apply pagination
+    if (opts?.limit) qb.take(opts.limit);
+    if (opts?.page && opts.page > 0 && opts.limit)
+      qb.skip((opts.page - 1) * opts.limit);
+
+    return qb.getMany();
+  }
+
+  async findOne(id: number): Promise<Guardian> {
     const guardian = await this.guardianRepo.findOne({
       where: { id },
       relations: ['user'],
     });
-    if (!guardian) throw new NotFoundException('Guardian not found');
+    if (!guardian)
+      throw new NotFoundException(`Guardian with ID ${id} not found`);
     return guardian;
   }
 
-  async create(dto: CreateGuardianDto): Promise<{ success: boolean }> {
-    const entity = this.guardianRepo.create(dto);
-    await this.guardianRepo.save(entity);
-    return { success: true };
-  }
-
-  async findAll(): Promise<GuardianResponseDto[]> {
-    const guardians = await this.guardianRepo.find({ relations: ['user'] });
-    return guardians.map((g) => this.toResponse(g));
-  }
-
-  async findOne(id: number): Promise<GuardianResponseDto> {
-    const guardian = await this.findEntityById(id);
-    return this.toResponse(guardian);
-  }
-
+  // UPDATE
   async update(
     id: number,
     dto: UpdateGuardianDto,
-  ): Promise<GuardianResponseDto> {
-    const guardian = await this.findEntityById(id);
+  ): Promise<{ success: boolean }> {
+    const guardian = await this.findOne(id);
 
-    if (dto.userId) {
-      const user = await this.userRepo.findOne({ where: { id: dto.userId } });
-      if (!user) throw new NotFoundException('User ID not found to update');
-      guardian.userId = user.id;
-      guardian.user = user;
+    // Update related User
+    if (dto.user) {
+      await this.userService.update(guardian.user.id, dto.user);
     }
 
-    if (dto.occupation !== undefined) guardian.occupation = dto.occupation;
-    if (dto.notes !== undefined) guardian.notes = dto.notes;
+    const updateFields: (keyof Omit<UpdateGuardianDto, 'user'>)[] = [
+      'occupation',
+    ];
 
-    const saved = await this.guardianRepo.save(guardian);
-    return this.toResponse(saved);
+    const updates: Partial<
+      Record<keyof UpdateGuardianDto, string | number | null>
+    > = {};
+
+    updateFields.forEach((key) => {
+      const value = dto[key];
+      if (value !== undefined) {
+        updates[key] = value ?? null;
+      }
+    });
+
+    Object.assign(guardian, updates);
+
+    await this.guardianRepo.save(guardian);
+    return { success: true };
   }
 
   // DELETE (soft: set user status = INACTIVE)

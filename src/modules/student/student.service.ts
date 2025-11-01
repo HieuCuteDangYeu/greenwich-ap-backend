@@ -154,7 +154,6 @@ export class StudentService {
     const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
       'faculty',
       'startYear',
-      'endYear',
       'startTerm',
       'endTerm',
       'status',

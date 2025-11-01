@@ -76,10 +76,6 @@ export class Student {
 
   @ApiProperty()
   @Column({ type: 'varchar', length: 20, nullable: false })
-  endYear!: string;
-
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
   startTerm!: string;
 
   @ApiProperty()

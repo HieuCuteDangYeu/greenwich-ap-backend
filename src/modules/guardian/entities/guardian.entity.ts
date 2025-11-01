@@ -4,6 +4,8 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../user/entities/user.entity';
 
@@ -15,13 +17,16 @@ export class Guardian {
   @Column({ name: 'user_id', type: 'bigint', nullable: false })
   userId!: number;
 
-  @ManyToOne(() => User, { nullable: false })
+  @ManyToOne(() => User, { nullable: false, eager: false })
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'varchar', length: 150, nullable: true })
-  occupation?: string | null;
+  @Column({ type: 'varchar', length: 150, nullable: false })
+  occupation!: string;
 
-  @Column({ type: 'text', nullable: true })
-  notes?: string | null;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
 }

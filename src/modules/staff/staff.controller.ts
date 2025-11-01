@@ -10,6 +10,7 @@ import {
   UseGuards,
   NotFoundException,
   ParseIntPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -22,6 +23,7 @@ import {
   ApiFindOneOperation,
   ApiFindAllOperation,
   ApiUpdateStatusOperation,
+  ApiPaginationQuery,
 } from '../../common/decorators/swagger.decorator';
 import { Staff } from './entities/staff.entity';
 import { StaffService } from './staff.service';
@@ -53,8 +55,18 @@ export class StaffController {
   @Get()
   @Roles(UserRole.ADMIN)
   @ApiFindAllOperation(Staff)
-  findAll() {
-    return this.staffService.findAll();
+  @ApiPaginationQuery()
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+  ) {
+    const opts = {
+      page: Number(page) || 1,
+      limit: Number(limit) || 25,
+      search,
+    };
+    return this.staffService.findAll(opts);
   }
 
   @Get(':id')
