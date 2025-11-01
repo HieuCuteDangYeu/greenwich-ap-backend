@@ -1,58 +1,75 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
   UseGuards,
-  HttpStatus,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
   ApiFindAllOperation,
   ApiFindOneOperation,
+  ApiPaginationQuery,
   ApiUpdateOperation,
+  ApiUpdateStatusOperation,
 } from '../../common/decorators/swagger.decorator';
-import { GuardianService } from './guardian.service';
-import { CreateGuardianDto } from './dto/create-guardian.dto';
-import { UpdateGuardianDto } from './dto/update-guardian.dto';
-import { GuardianResponseDto } from './dto/guardian-response.dto';
+import { UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../common/enums/roles.enum';
-import { ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
+import { CreateGuardianDto } from './dto/create-guardian.dto';
+import { UpdateGuardianDto } from './dto/update-guardian.dto';
+import { Guardian } from './entities/guardian.entity';
+import { GuardianService } from './guardian.service';
+
 @ApiController('Guardians', { requireAuth: true })
 @Controller('guardians')
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 export class GuardianController {
   constructor(private readonly guardianService: GuardianService) {}
 
   @Post()
-  @ApiCreateOperation(GuardianResponseDto, 'Create a new guardian')
+  @Roles(UserRole.ADMIN)
+  @ApiCreateOperation(Guardian)
   create(@Body() dto: CreateGuardianDto) {
     return this.guardianService.create(dto);
   }
 
   @Get()
-  @ApiFindAllOperation(GuardianResponseDto, 'Get all guardians')
-  findAll() {
-    return this.guardianService.findAll();
+  @Roles(UserRole.ADMIN)
+  @ApiFindAllOperation(Guardian)
+  @ApiPaginationQuery()
+  findAll(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('search') search?: string,
+  ) {
+    const opts = {
+      page: Number(page) || 1,
+      limit: Number(limit) || 25,
+      search,
+    };
+    return this.guardianService.findAll(opts);
   }
 
   @Get(':id')
-  @ApiFindOneOperation(GuardianResponseDto, 'Get a guardian by ID')
+  @Roles(UserRole.ADMIN)
+  @ApiFindOneOperation(Guardian)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.guardianService.findOne(id);
   }
 
   @Patch(':id')
-  @ApiUpdateOperation(GuardianResponseDto, 'Update a guardian by ID')
+  @Roles(UserRole.ADMIN)
+  @ApiUpdateOperation(Guardian)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateGuardianDto,
@@ -63,12 +80,7 @@ export class GuardianController {
   // DELETE (soft: set user status=INACTIVE)
   @Patch(':id/status')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update guardian status' })
-  @ApiBody({ type: UpdateUserStatusDto })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Guardian status has been successfully updated',
-  })
+  @ApiUpdateStatusOperation(UpdateUserStatusDto, 'Update guardian status')
   async updateGuardianStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: UpdateUserStatusDto,

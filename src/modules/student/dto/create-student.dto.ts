@@ -1,25 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
-  IsEnum,
-  IsDateString,
-  IsNumber,
-  IsNotEmpty,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { CreateStudentUserDto } from './create-student-user.dto';
+import { UserInStudentDto } from './user-in-student.dto';
 
 export class CreateStudentDto {
   @ApiProperty({
     description: 'User Info',
-    type: () => CreateStudentUserDto,
+    type: () => UserInStudentDto,
   })
   @ValidateNested()
-  @Type(() => CreateStudentUserDto)
+  @Type(() => UserInStudentDto)
   @IsNotEmpty()
-  user!: CreateStudentUserDto;
+  user!: UserInStudentDto;
 
   @ApiProperty({
     description: 'Unique student code',
@@ -82,14 +82,6 @@ export class CreateStudentDto {
   @IsNotEmpty()
   @IsString()
   startYear!: string;
-
-  @ApiProperty({
-    description: 'End year',
-    example: '4',
-  })
-  @IsNotEmpty()
-  @IsString()
-  endYear!: string;
 
   @ApiProperty({
     description: 'Start term',

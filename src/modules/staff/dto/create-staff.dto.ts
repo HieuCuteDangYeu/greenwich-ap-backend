@@ -1,47 +1,54 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
-  IsEmail,
   IsEnum,
+  IsNotEmpty,
   IsOptional,
   IsString,
+  ValidateNested,
 } from 'class-validator';
+import { SetStaffRoleDto } from './set-staff-role.dto';
+import { UserInStaffDto } from './user-in-staff.dto';
 
 export class CreateStaffDto {
-  @ApiProperty({ required: false })
-  @IsOptional()
-  userId?: number;
+  @ApiProperty({
+    description: 'User Info',
+    type: () => UserInStaffDto,
+  })
+  @ValidateNested()
+  @Type(() => UserInStaffDto)
+  @IsNotEmpty()
+  user!: UserInStaffDto;
 
-  @ApiProperty({ required: false, example: 'staff001@gmail.com' })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @ApiProperty({ required: false, example: 'staff123' })
-  @IsOptional()
-  password?: string;
-
-  @ApiProperty({ example: 'Luan' })
+  @ApiProperty({
+    description: 'Unique staff code',
+    required: true,
+    example: 'FGWS001',
+  })
+  @IsNotEmpty()
   @IsString()
-  givenName!: string;
+  staffCode!: string;
 
-  @ApiProperty({ example: 'Lou' })
-  @IsString()
-  surname!: string;
-
-  @ApiProperty({ required: false, example: 1 })
+  @ApiProperty({
+    description: 'Staff role info',
+    type: () => SetStaffRoleDto,
+    required: false,
+  })
+  @ValidateNested()
+  @Type(() => SetStaffRoleDto)
   @IsOptional()
-  campusId?: number;
+  staffRole?: SetStaffRoleDto;
 
-  @ApiProperty({ required: false, example: 'FGWS001' })
-  @IsOptional()
-  @IsString()
-  staffCode?: string;
+  @ApiProperty({ required: true, example: '2023-09-01' })
+  @IsNotEmpty()
+  @IsDateString()
+  hireDate!: string;
 
-  @ApiProperty({ required: false, example: '2023-09-01' })
+  @ApiProperty({ required: false, example: '2028-09-01' })
   @IsOptional()
   @IsDateString()
-  hireDate?: string;
+  endDate?: string;
 
   @ApiProperty({
     enum: ['ACTIVE', 'INACTIVE', 'SABBATICAL', 'LEFT'],
@@ -52,7 +59,7 @@ export class CreateStaffDto {
   @IsEnum(['ACTIVE', 'INACTIVE', 'SABBATICAL', 'LEFT'])
   status?: 'ACTIVE' | 'INACTIVE' | 'SABBATICAL' | 'LEFT';
 
-  @ApiProperty({ required: false, example: 'Staff' })
+  @ApiProperty({ required: false, example: 'new teacher' })
   @IsOptional()
   @IsString()
   notes?: string;
