@@ -1,37 +1,37 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  Query,
+  Get,
+  Param,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiQuery, ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
+  ApiDeleteOperation,
   ApiFindAllOperation,
   ApiFindOneOperation,
   ApiUpdateOperation,
-  ApiDeleteOperation,
 } from '../../common/decorators/swagger.decorator';
-import { AttendanceService } from './attendance.service';
-import { CreateAttendanceDto } from './dto/create-attendance.dto';
-import { UpdateAttendanceDto } from './dto/update-attendance.dto';
-import { CreateBulkAttendanceDto } from './dto/create-bulk-attendance.dto';
-import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
-import { Attendance } from './entities/attendance.entity';
+import { StaffRole, UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { StudentScheduleResponseDto } from './dto/student-schedule-response.dto';
-import { StaffRole, UserRole } from '../../common/enums/roles.enum';
 import { StaffRolesGuard } from '../auth/guards/staff-roles.guard';
-import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
+import { AttendanceService } from './attendance.service';
+import { CreateAttendanceDto } from './dto/create-attendance.dto';
+import { CreateBulkAttendanceDto } from './dto/create-bulk-attendance.dto';
+import { StudentScheduleResponseDto } from './dto/student-schedule-response.dto';
+import { UpdateAttendanceDto } from './dto/update-attendance.dto';
+import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
+import { Attendance } from './entities/attendance.entity';
 
 @ApiController('Attendance', { requireAuth: true })
 @Controller('attendance')
@@ -153,7 +153,7 @@ export class AttendanceController {
     example: '2025-10-07',
   })
   async getStudentSchedule(
-    @Query('studentId', ParseIntPipe) studentId: number,
+    @Query('studentId') studentId: number,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ): Promise<StudentScheduleResponseDto> {
@@ -162,6 +162,40 @@ export class AttendanceController {
       startDate,
       endDate,
     );
+  }
+
+  // GET student attendance statistics
+  @Get('stats')
+  @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
+  @StaffRoles(StaffRole.TEACHER)
+  @ApiFindAllOperation(Attendance, 'Get attendance statistics for students')
+  @ApiQuery({
+    name: 'studentId',
+    description: 'Filter statistics by student ID (optional)',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'courseId',
+    description: 'Filter statistics by course ID (optional)',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  @ApiQuery({
+    name: 'classId',
+    description: 'Filter statistics by class ID (optional)',
+    required: false,
+    type: Number,
+    example: 1,
+  })
+  getStudentStats(
+    @Query('studentId') studentId?: number,
+    @Query('courseId') courseId?: number,
+    @Query('classId') classId?: number,
+  ) {
+    return this.attendanceService.getStudentStats(studentId, courseId, classId);
   }
 
   // READ one
@@ -191,24 +225,5 @@ export class AttendanceController {
   @ApiDeleteOperation(Attendance, 'Delete attendance record')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.attendanceService.remove(id);
-  }
-
-  // GET student attendance statistics
-  @Get('student/:studentId/stats')
-  @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
-  @StaffRoles(StaffRole.TEACHER)
-  @ApiFindOneOperation(Attendance, 'Get attendance statistics for a student')
-  @ApiQuery({
-    name: 'courseId',
-    description: 'Filter statistics by course ID (optional)',
-    required: false,
-    type: Number,
-    example: 1,
-  })
-  getStudentStats(
-    @Param('studentId', ParseIntPipe) studentId: number,
-    @Query('courseId', ParseIntPipe) courseId?: number,
-  ) {
-    return this.attendanceService.getStudentStats(studentId, courseId);
   }
 }
