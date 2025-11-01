@@ -4,22 +4,23 @@ export class DropThreadTaggedUsers1770000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Drop foreign keys first
     await queryRunner.query(`
-      ALTER TABLE "thread_tagged_users" DROP CONSTRAINT IF EXISTS "FK_119729d11176bfb9ff5d6a6800e";
-    `);
-    await queryRunner.query(`
-      ALTER TABLE "thread_tagged_users" DROP CONSTRAINT IF EXISTS "FK_817406c77a219a1d33056af0133";
-    `);
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.tables
+          WHERE table_name = 'thread_tagged_users'
+        ) THEN
+          ALTER TABLE "thread_tagged_users" DROP CONSTRAINT IF EXISTS "FK_119729d11176bfb9ff5d6a6800e";
+          ALTER TABLE "thread_tagged_users" DROP CONSTRAINT IF EXISTS "FK_817406c77a219a1d33056af0133";
 
-    // Drop indexes (if they exist)
-    await queryRunner.query(`
-      DROP INDEX IF EXISTS "IDX_119729d11176bfb9ff5d6a6800";
-    `);
-    await queryRunner.query(`
-      DROP INDEX IF EXISTS "IDX_817406c77a219a1d33056af013";
-    `);
+          DROP INDEX IF EXISTS "IDX_119729d11176bfb9ff5d6a6800";
+          DROP INDEX IF EXISTS "IDX_817406c77a219a1d33056af013";
 
-    // Drop the table itself
-    await queryRunner.query(`DROP TABLE IF EXISTS "thread_tagged_users";`);
+          DROP TABLE IF EXISTS "thread_tagged_users";
+        END IF;
+      END $$;
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -38,11 +39,15 @@ export class DropThreadTaggedUsers1770000000000 implements MigrationInterface {
     `);
     await queryRunner.query(`
       ALTER TABLE "thread_tagged_users"
-      ADD CONSTRAINT "FK_119729d11176bfb9ff5d6a6800e" FOREIGN KEY ("threadsId") REFERENCES "threads"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      ADD CONSTRAINT "FK_119729d11176bfb9ff5d6a6800e"
+      FOREIGN KEY ("threadsId") REFERENCES "threads"("id")
+      ON DELETE CASCADE ON UPDATE CASCADE;
     `);
     await queryRunner.query(`
       ALTER TABLE "thread_tagged_users"
-      ADD CONSTRAINT "FK_817406c77a219a1d33056af0133" FOREIGN KEY ("userAccountId") REFERENCES "user_account"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+      ADD CONSTRAINT "FK_817406c77a219a1d33056af0133"
+      FOREIGN KEY ("userAccountId") REFERENCES "user_account"("id")
+      ON DELETE CASCADE ON UPDATE CASCADE;
     `);
   }
 }
