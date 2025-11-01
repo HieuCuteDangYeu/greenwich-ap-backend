@@ -444,7 +444,7 @@ export class AttendanceService {
     // Group attendances by studentId
     const attendancesByStudent = new Map<number, typeof attendances>();
     attendances.forEach((att) => {
-      const studentId = Number(att.studentId);
+      const studentId = att.studentId;
       if (!attendancesByStudent.has(studentId)) {
         attendancesByStudent.set(studentId, []);
       }
@@ -468,7 +468,7 @@ export class AttendanceService {
       const attendanceRate = total > 0 ? (present / total) * 100 : 0;
 
       return {
-        studentId: Number(student.id),
+        studentId: student.id,
         studentCode: student.studentCode,
         studentName: student.user?.fullName || '',
         total,
