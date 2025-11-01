@@ -37,8 +37,8 @@ export class CreateStaffDto {
   })
   @ValidateNested()
   @Type(() => SetStaffRoleDto)
-  @IsNotEmpty()
-  staffRole!: SetStaffRoleDto;
+  @IsOptional()
+  staffRole?: SetStaffRoleDto;
 
   @ApiProperty({ required: true, example: '2023-09-01' })
   @IsNotEmpty()
