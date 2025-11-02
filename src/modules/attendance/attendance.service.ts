@@ -88,11 +88,11 @@ export class AttendanceService {
       .orderBy('a.createdAt', 'DESC');
 
     if (filter?.studentId) {
-      qb.andWhere('a.studentId = :studentId', { studentId: filter.studentId });
+      qb.andWhere('a.student_id = :studentId', { studentId: filter.studentId });
     }
 
     if (filter?.sessionId) {
-      qb.andWhere('a.sessionId = :sessionId', { sessionId: filter.sessionId });
+      qb.andWhere('a.session_id = :sessionId', { sessionId: filter.sessionId });
     }
 
     if (filter?.status) {
@@ -218,10 +218,10 @@ export class AttendanceService {
     // Get existing attendance records for this session
     const existingAttendances = await this.attendanceRepo
       .createQueryBuilder('attendance')
-      .where('attendance.sessionId = :sessionId', {
+      .where('attendance.session_id = :sessionId', {
         sessionId: dto.sessionId,
       })
-      .andWhere('attendance.studentId IN (:...studentIds)', { studentIds })
+      .andWhere('attendance.student_id IN (:...studentIds)', { studentIds })
       .getMany();
 
     const existingAttendanceMap = new Map(
@@ -301,10 +301,10 @@ export class AttendanceService {
       .createQueryBuilder('attendance')
       .leftJoinAndSelect('attendance.student', 'student')
       .leftJoinAndSelect('attendance.session', 'session')
-      .where('attendance.sessionId = :sessionId', {
+      .where('attendance.session_id = :sessionId', {
         sessionId: dto.sessionId,
       })
-      .andWhere('attendance.studentId IN (:...studentIds)', { studentIds })
+      .andWhere('attendance.student_id IN (:...studentIds)', { studentIds })
       .getMany();
 
     const attendanceMap = new Map(
@@ -388,8 +388,8 @@ export class AttendanceService {
 
       const queryBuilder = this.attendanceRepo
         .createQueryBuilder('attendance')
-        .leftJoin('attendance.session', 'session')
-        .where('attendance.studentId = :studentId', { studentId });
+        .leftJoinAndSelect('attendance.session', 'session')
+        .where('attendance.student_id = :studentId', { studentId });
 
       if (courseId) {
         queryBuilder.andWhere('session.course_id = :courseId', { courseId });
@@ -427,13 +427,13 @@ export class AttendanceService {
       return [];
     }
 
-    const studentIds = students.map((s) => s.id);
+    const studentIds = students.map((s) => Number(s.id));
 
     // Get all attendances for these students
     const attendanceQuery = this.attendanceRepo
       .createQueryBuilder('attendance')
-      .leftJoin('attendance.session', 'session')
-      .where('attendance.studentId IN (:...studentIds)', { studentIds });
+      .leftJoinAndSelect('attendance.session', 'session')
+      .where('attendance.student_id IN (:...studentIds)', { studentIds });
 
     if (courseId) {
       attendanceQuery.andWhere('session.course_id = :courseId', { courseId });
@@ -444,7 +444,7 @@ export class AttendanceService {
     // Group attendances by studentId
     const attendancesByStudent = new Map<number, typeof attendances>();
     attendances.forEach((att) => {
-      const studentId = att.studentId;
+      const studentId = Number(att.studentId);
       if (!attendancesByStudent.has(studentId)) {
         attendancesByStudent.set(studentId, []);
       }
@@ -548,8 +548,8 @@ export class AttendanceService {
     const attendances = await this.attendanceRepo
       .createQueryBuilder('attendance')
       .select(['attendance.sessionId', 'attendance.status'])
-      .where('attendance.studentId = :studentId', { studentId })
-      .andWhere('attendance.sessionId IN (:...sessionIds)', { sessionIds })
+      .where('attendance.student_id = :studentId', { studentId })
+      .andWhere('attendance.session_id IN (:...sessionIds)', { sessionIds })
       .getMany();
 
     // Create a map of session ID to attendance status
