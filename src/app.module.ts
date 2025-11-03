@@ -1,27 +1,28 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
-import { UserModule } from './modules/user/user.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { StudentModule } from './modules/student/student.module';
-import { CourseModule } from './modules/course/course.module';
-import { CampusModule } from './modules/campus/campus.module';
-import { DepartmentModule } from './modules/department/department.module';
-import { ClassModule } from './modules/class/class.module';
-import { ThreadModule } from './modules/thread/thread.module';
-import { CommentModule } from './modules/comment/comment.module';
-import { RoomModule } from './modules/room/room.module';
-import { TimeSlotModule } from './modules/time-slot/time-slot.module';
 import { HealthController } from './health/health.controller';
-import { AttendanceModule } from './modules/attendance/attendance.module';
-import { GuardianModule } from './modules/guardian/guardian.module';
-import { StaffModule } from './modules/staff/staff.module';
-import { TermModule } from './modules/term/term.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CampusModule } from './modules/campus/campus.module';
+import { ClassModule } from './modules/class/class.module';
+import { CommentModule } from './modules/comment/comment.module';
+import { CourseModule } from './modules/course/course.module';
+import { DepartmentModule } from './modules/department/department.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
+import { GuardianModule } from './modules/guardian/guardian.module';
 import { ProgrammeModule } from './modules/programme/programme.module';
+import { RoomModule } from './modules/room/room.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { StudentModule } from './modules/student/student.module';
+import { TermModule } from './modules/term/term.module';
+import { ThreadModule } from './modules/thread/thread.module';
+import { TimeSlotModule } from './modules/time-slot/time-slot.module';
+import { UserModule } from './modules/user/user.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -55,6 +56,7 @@ import { ProgrammeModule } from './modules/programme/programme.module';
     StaffModule,
     TermModule,
     ProgrammeModule,
+    FeedbackModule,
   ],
   controllers: [HealthController],
   providers: [],
