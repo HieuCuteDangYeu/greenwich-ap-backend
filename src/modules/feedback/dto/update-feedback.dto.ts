@@ -22,6 +22,15 @@ export class UpdateFeedbackQuestionDto extends PartialType(
   questionText?: string;
 
   @ApiProperty({
+    description: 'The text of the feedback question in Vietnamese',
+    example: 'Bạn đánh giá chất lượng giảng dạy như thế nào?',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  questionTextVi?: string;
+
+  @ApiProperty({
     description: 'The type of question',
     enum: QuestionType,
     example: QuestionType.RATING,

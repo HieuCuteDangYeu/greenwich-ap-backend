@@ -202,11 +202,11 @@ export class FeedbackService {
 
           forms.push({
             staffId: teacher.id,
-            teacherName: `Instructor: ${teacher.user?.fullName || 'Unknown'}`,
+            teacherName: `${teacher.user?.fullName || 'Unknown'}`,
             staffCode: teacher.staffCode,
             courseId: course.id,
             courseName: course.title,
-            classCode: `Class: ${classEntity.name}`,
+            classCode: `${classEntity.name}`,
             classId: classEntity.id,
             termId: term.id,
             isSubmitted: submissionSet.has(key),
@@ -220,6 +220,7 @@ export class FeedbackService {
       questions: questions.map((q) => ({
         id: q.id,
         questionText: q.questionText,
+        questionTextVi: q.questionTextVi,
         questionType: q.questionType,
         questionOrder: q.questionOrder,
         options: q.options,
@@ -289,8 +290,8 @@ export class FeedbackService {
       throw new BadRequestException('Some questions are invalid or inactive');
     }
 
-    // Create a map of questions for easy lookup
-    const questionMap = new Map(questions.map((q) => [q.id, q]));
+    // Create a map of questions for easy lookup (convert string IDs to numbers)
+    const questionMap = new Map(questions.map((q) => [Number(q.id), q]));
 
     // Validate that each answer's selected option matches the question's available options
     for (const answer of dto.answers) {

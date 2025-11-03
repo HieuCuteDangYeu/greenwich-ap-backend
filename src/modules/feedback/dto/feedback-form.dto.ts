@@ -72,6 +72,13 @@ export class FeedbackQuestionDto {
   questionText!: string;
 
   @ApiProperty({
+    description: 'The text of the feedback question in Vietnamese',
+    example: 'Về sự đúng giờ của giảng viên',
+    required: false,
+  })
+  questionTextVi?: string;
+
+  @ApiProperty({
     description: 'The type of question',
     enum: QuestionType,
     example: QuestionType.MULTIPLE_CHOICE,

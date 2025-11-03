@@ -22,6 +22,18 @@ export class FeedbackQuestion {
   questionText!: string;
 
   @ApiProperty({
+    description: 'The feedback question text in Vietnamese',
+    required: false,
+  })
+  @Column({
+    name: 'question_text_vi',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  questionTextVi?: string;
+
+  @ApiProperty({
     enum: QuestionType,
     description: 'Type of question (multiple choice, rating, yes/no, text)',
     default: QuestionType.MULTIPLE_CHOICE,
