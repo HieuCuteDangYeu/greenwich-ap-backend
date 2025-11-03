@@ -58,6 +58,7 @@ export class FeedbackController {
   }
 
   @Get('questions')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiQuery({
     name: 'includeInactive',
     required: false,
@@ -69,6 +70,7 @@ export class FeedbackController {
   }
 
   @Get('questions/:id')
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiFindOneOperation(FeedbackQuestion, 'Get a feedback question by ID')
   findQuestion(@Param('id', ParseIntPipe) id: number) {
     return this.feedbackService.findQuestionById(id);

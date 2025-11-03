@@ -28,9 +28,7 @@ export class Staff {
 
   @OneToOne(() => StaffRole, (role) => role.staff, {
     nullable: true,
-    eager: true,
   })
-  @JoinColumn({ referencedColumnName: 'staffId' })
   role?: StaffRole | null;
 
   @ApiProperty()
