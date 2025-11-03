@@ -1,4 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { QuestionType } from '../../../common/enums/question-type.enum';
+import { QuestionOption } from '../../../common/types/question-option.enum';
 
 export class FeedbackFormDto {
   @ApiProperty({
@@ -56,6 +58,46 @@ export class FeedbackFormDto {
   isSubmitted!: boolean;
 }
 
+export class FeedbackQuestionDto {
+  @ApiProperty({
+    description: 'Question ID',
+    example: 1,
+  })
+  id!: number;
+
+  @ApiProperty({
+    description: 'The text of the feedback question',
+    example: "Regarding the teacher's punctuality",
+  })
+  questionText!: string;
+
+  @ApiProperty({
+    description: 'The type of question',
+    enum: QuestionType,
+    example: QuestionType.MULTIPLE_CHOICE,
+  })
+  questionType!: QuestionType;
+
+  @ApiProperty({
+    description: 'The display order of the question',
+    example: 1,
+  })
+  questionOrder!: number;
+
+  @ApiProperty({
+    description: 'Available options for the question',
+    type: 'array',
+    example: [
+      {
+        value: 'ALWAYS_PUNCTUAL',
+        label: 'Always punctual',
+        labelVi: 'Luôn đúng giờ',
+      },
+    ],
+  })
+  options!: QuestionOption[];
+}
+
 export class StudentFeedbackFormsResponseDto {
   @ApiProperty({
     description: 'List of feedback forms for the student',
@@ -65,11 +107,7 @@ export class StudentFeedbackFormsResponseDto {
 
   @ApiProperty({
     description: 'Active feedback questions',
-    type: 'array',
+    type: [FeedbackQuestionDto],
   })
-  questions!: Array<{
-    id: number;
-    questionText: string;
-    questionOrder: number;
-  }>;
+  questions!: FeedbackQuestionDto[];
 }

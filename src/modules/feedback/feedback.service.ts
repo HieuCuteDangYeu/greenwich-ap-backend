@@ -220,7 +220,9 @@ export class FeedbackService {
       questions: questions.map((q) => ({
         id: q.id,
         questionText: q.questionText,
+        questionType: q.questionType,
         questionOrder: q.questionOrder,
+        options: q.options,
       })),
     };
   }
