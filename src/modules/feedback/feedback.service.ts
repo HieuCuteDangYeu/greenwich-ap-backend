@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
+import { QuestionOption } from '../../common/types/question-option.enum';
 import { Class } from '../class/entities/class.entity';
 import { Course } from '../course/entities/course.entity';
 import { Staff } from '../staff/entities/staff.entity';
@@ -43,28 +44,38 @@ export class FeedbackService {
     private termRepository: Repository<Term>,
   ) {}
 
-  // Question Management (for Staff)
-  async createQuestion(
-    dto: CreateFeedbackQuestionDto,
-  ): Promise<FeedbackQuestion> {
-    // Validate that all option values are unique
-    const optionValues = dto.options.map((opt) => opt.value);
-    const uniqueValues = new Set(optionValues);
-    if (optionValues.length !== uniqueValues.size) {
-      throw new BadRequestException('Option values must be unique');
+  private validateQuestionOptions(options: QuestionOption[]): void {
+    if (!options || options.length === 0) {
+      return;
     }
 
-    // Validate that all options have required fields
-    for (const option of dto.options) {
+    // Check for duplicate option values
+    const optionValues = options.map((opt) => opt.value);
+    const uniqueValues = new Set(optionValues);
+    if (optionValues.length !== uniqueValues.size) {
+      throw new BadRequestException(
+        'Option values must be unique within a question',
+      );
+    }
+
+    // Validate each option has required fields
+    for (const option of options) {
       if (!option.value || !option.label) {
         throw new BadRequestException(
-          'Each option must have a value and label',
+          'Each option must have both value and label fields',
         );
       }
     }
+  }
+
+  async createQuestion(
+    dto: CreateFeedbackQuestionDto,
+  ): Promise<FeedbackQuestion> {
+    // Validate options if provided
+    this.validateQuestionOptions(dto.options);
 
     const question = this.feedbackQuestionRepository.create(dto);
-    return await this.feedbackQuestionRepository.save(question);
+    return this.feedbackQuestionRepository.save(question);
   }
 
   async findAllQuestions(includeInactive = false): Promise<FeedbackQuestion[]> {
@@ -90,8 +101,14 @@ export class FeedbackService {
     dto: UpdateFeedbackQuestionDto,
   ): Promise<FeedbackQuestion> {
     const question = await this.findQuestionById(id);
+
+    // Validate options if they are being updated
+    if (dto.options) {
+      this.validateQuestionOptions(dto.options);
+    }
+
     Object.assign(question, dto);
-    return await this.feedbackQuestionRepository.save(question);
+    return this.feedbackQuestionRepository.save(question);
   }
 
   async deleteQuestion(id: number): Promise<void> {

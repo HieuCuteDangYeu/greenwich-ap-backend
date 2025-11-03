@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -112,7 +113,7 @@ export class FeedbackController {
   ): Promise<StudentFeedbackFormsResponseDto> {
     const studentId = user.student?.id;
     if (!studentId) {
-      throw new Error('Student ID not found in user context');
+      throw new BadRequestException('Student ID not found in user context');
     }
     return this.feedbackService.getStudentFeedbackForms(
       studentId,
@@ -134,7 +135,7 @@ export class FeedbackController {
   ) {
     const studentId = user.student?.id;
     if (!studentId) {
-      throw new Error('Student ID not found in user context');
+      throw new BadRequestException('Student ID not found in user context');
     }
     return this.feedbackService.submitFeedback(studentId, dto);
   }
@@ -156,7 +157,7 @@ export class FeedbackController {
   ) {
     const staffId = user.staff?.id;
     if (!staffId) {
-      throw new Error('Staff ID not found in user context');
+      throw new BadRequestException('Staff ID not found in user context');
     }
     return this.feedbackService.getFeedbackResponses(
       staffId,

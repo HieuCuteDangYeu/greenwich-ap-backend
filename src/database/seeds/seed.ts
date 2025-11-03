@@ -220,7 +220,7 @@ export const seed = async (): Promise<void> => {
         },
         {
           questionText:
-            'Support from the teacher - guidance for practical exercises, answering questions and side of class',
+            'Support from the teacher - guidance for practical exercises, answering questions outside of class',
           questionType: QuestionType.MULTIPLE_CHOICE,
           questionOrder: 4,
           isActive: true,
