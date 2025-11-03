@@ -14,6 +14,7 @@ export class FeedbackAnswerDto {
     example: 1,
   })
   @IsNumber()
+  @Type(() => Number)
   questionId!: number;
 
   @ApiProperty({
@@ -31,6 +32,7 @@ export class SubmitFeedbackDto {
     example: 1,
   })
   @IsNumber()
+  @Type(() => Number)
   staffId!: number;
 
   @ApiProperty({
@@ -38,6 +40,7 @@ export class SubmitFeedbackDto {
     example: 1,
   })
   @IsNumber()
+  @Type(() => Number)
   courseId!: number;
 
   @ApiProperty({
@@ -45,6 +48,7 @@ export class SubmitFeedbackDto {
     example: 1,
   })
   @IsNumber()
+  @Type(() => Number)
   classId!: number;
 
   @ApiProperty({
@@ -52,6 +56,7 @@ export class SubmitFeedbackDto {
     example: 1,
   })
   @IsNumber()
+  @Type(() => Number)
   termId!: number;
 
   @ApiProperty({

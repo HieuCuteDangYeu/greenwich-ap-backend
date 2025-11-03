@@ -45,7 +45,6 @@ const AppDataSource = new DataSource(config);
 export const seed = async (): Promise<void> => {
   try {
     await AppDataSource.initialize();
-    console.log('🌱 Starting database seeding...\n');
 
     const campusRepo = AppDataSource.getRepository(Campus);
     const campusData = [
@@ -55,18 +54,11 @@ export const seed = async (): Promise<void> => {
       { code: 'CT', name: 'Can Tho' },
     ];
 
-    let campusCount = 0;
     for (const campus of campusData) {
       const exists = await campusRepo.findOne({ where: { code: campus.code } });
       if (!exists) {
         await campusRepo.save(campus);
-        campusCount++;
       }
-    }
-    if (campusCount > 0) {
-      console.log(`✓ Seeded ${campusCount} campuses`);
-    } else {
-      console.log('✓ Campuses already seeded, skipping...');
     }
 
     const roleRepo = AppDataSource.getRepository(Role);
@@ -77,18 +69,11 @@ export const seed = async (): Promise<void> => {
       { name: 'Guardian' },
     ];
 
-    let roleCount = 0;
     for (const role of roleData) {
       const exists = await roleRepo.findOne({ where: { name: role.name } });
       if (!exists) {
         await roleRepo.save(role);
-        roleCount++;
       }
-    }
-    if (roleCount > 0) {
-      console.log(`✓ Seeded ${roleCount} roles`);
-    } else {
-      console.log('✓ Roles already seeded, skipping...');
     }
 
     const userRepo = AppDataSource.getRepository(User);
@@ -117,14 +102,10 @@ export const seed = async (): Promise<void> => {
         campusId: hcmCampus.id,
       });
 
-      // Create admin record with password
       await adminRepo.save({
         userId: adminUser.id,
         password: hashedPassword,
       });
-      console.log(`✓ Created admin user: ${adminEmail}`);
-    } else {
-      console.log('✓ Admin user already exists, skipping...');
     }
 
     // Seed feedback questions
@@ -135,6 +116,7 @@ export const seed = async (): Promise<void> => {
       const questions = [
         {
           questionText: "Regarding the teacher's punctuality",
+          questionTextVi: 'Về sự đúng giờ của giảng viên',
           questionType: QuestionType.MULTIPLE_CHOICE,
           questionOrder: 1,
           isActive: true,
@@ -164,6 +146,8 @@ export const seed = async (): Promise<void> => {
         {
           questionText:
             'The teacher adequately covers the topics required by the syllabus',
+          questionTextVi:
+            'Giảng viên giảng dạy đầy đủ các chủ đề theo yêu cầu của đề cương môn học',
           questionType: QuestionType.MULTIPLE_CHOICE,
           questionOrder: 2,
           isActive: true,
@@ -192,6 +176,8 @@ export const seed = async (): Promise<void> => {
         },
         {
           questionText: "Teacher's response to student's questions in class",
+          questionTextVi:
+            'Phản hồi của giảng viên đối với câu hỏi của sinh viên trong lớp',
           questionType: QuestionType.MULTIPLE_CHOICE,
           questionOrder: 3,
           isActive: true,
@@ -221,6 +207,8 @@ export const seed = async (): Promise<void> => {
         {
           questionText:
             'Support from the teacher - guidance for practical exercises, answering questions outside of class',
+          questionTextVi:
+            'Sự hỗ trợ từ giảng viên - hướng dẫn bài tập thực hành, trả lời câu hỏi ngoài giờ học',
           questionType: QuestionType.MULTIPLE_CHOICE,
           questionOrder: 4,
           isActive: true,
@@ -250,14 +238,38 @@ export const seed = async (): Promise<void> => {
       ];
 
       await feedbackQuestionRepo.save(questions);
-      console.log(`✓ Seeded ${questions.length} feedback questions`);
     } else {
-      console.log('✓ Feedback questions already seeded, skipping...');
-    }
+      const updates = [
+        {
+          questionOrder: 1,
+          questionTextVi: 'Về sự đúng giờ của giảng viên',
+        },
+        {
+          questionOrder: 2,
+          questionTextVi:
+            'Giảng viên giảng dạy đầy đủ các chủ đề theo yêu cầu của đề cương môn học',
+        },
+        {
+          questionOrder: 3,
+          questionTextVi:
+            'Phản hồi của giảng viên đối với câu hỏi của sinh viên trong lớp',
+        },
+        {
+          questionOrder: 4,
+          questionTextVi:
+            'Sự hỗ trợ từ giảng viên - hướng dẫn bài tập thực hành, trả lời câu hỏi ngoài giờ học',
+        },
+      ];
 
-    console.log('\n✅ Database seeding completed successfully!');
+      for (const update of updates) {
+        await feedbackQuestionRepo.update(
+          { questionOrder: update.questionOrder },
+          { questionTextVi: update.questionTextVi },
+        );
+      }
+    }
   } catch (error) {
-    console.error('❌ Error during seeding:', error);
+    console.error('Error during seeding:', error);
     throw error;
   } finally {
     if (AppDataSource.isInitialized) {
