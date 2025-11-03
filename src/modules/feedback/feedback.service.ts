@@ -18,11 +18,9 @@ import {
 } from './dto/feedback-form.dto';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 import { UpdateFeedbackQuestionDto } from './dto/update-feedback.dto';
-import {
-  FeedbackQuestion,
-  FeedbackResponse,
-  FeedbackSubmission,
-} from './entities/feedback.entity';
+import { FeedbackQuestion } from './entities/feedback-question.entity';
+import { FeedbackResponse } from './entities/feedback-response.entity';
+import { FeedbackSubmission } from './entities/feedback-submission.entity';
 
 @Injectable()
 export class FeedbackService {

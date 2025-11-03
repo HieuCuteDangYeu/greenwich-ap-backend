@@ -7,19 +7,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-
-export enum QuestionType {
-  MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
-  RATING = 'RATING',
-  YES_NO = 'YES_NO',
-  TEXT = 'TEXT',
-}
-
-export interface QuestionOption {
-  value: string;
-  label: string;
-  labelVi?: string; // Vietnamese translation
-}
+import { QuestionType } from '../../../common/enums/question-type.enum';
+import { QuestionOption } from '../../../common/types/question-option.enum';
+import { QuestionOptionDto } from '../dto/create-feedback.dto';
 
 @Entity({ name: 'feedback_question' })
 export class FeedbackQuestion {
@@ -46,19 +36,8 @@ export class FeedbackQuestion {
 
   @ApiProperty({
     description: 'Array of available options for the question',
-    type: 'array',
-    example: [
-      {
-        value: 'ALWAYS_PUNCTUAL',
-        label: 'Always punctual',
-        labelVi: 'Luôn đúng giờ',
-      },
-      {
-        value: 'MOSTLY_PUNCTUAL',
-        label: 'Mostly punctual',
-        labelVi: 'Phần lớn đúng giờ',
-      },
-    ],
+    type: [QuestionOptionDto],
+    isArray: true,
   })
   @Column({ type: 'jsonb' })
   options!: QuestionOption[];

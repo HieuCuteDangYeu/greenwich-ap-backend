@@ -2,11 +2,9 @@ import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 import path from 'path';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { QuestionType } from '../../common/enums/question-type.enum';
 import { Admin } from '../../modules/admin/entities/admin.entity';
-import {
-  FeedbackQuestion,
-  QuestionType,
-} from '../../modules/feedback/entities/feedback-question.entity';
+import { FeedbackQuestion } from '../../modules/feedback/entities/feedback-question.entity';
 import { Campus } from '../../modules/user/entities/campus.entity';
 import { Role } from '../../modules/user/entities/role.entity';
 import { User } from '../../modules/user/entities/user.entity';

@@ -10,16 +10,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiQuery,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 import {
+  ApiController,
   ApiCreateOperation,
   ApiDeleteOperation,
   ApiFindOneOperation,
@@ -37,22 +33,20 @@ import { CreateFeedbackQuestionDto } from './dto/create-feedback.dto';
 import { StudentFeedbackFormsResponseDto } from './dto/feedback-form.dto';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 import { UpdateFeedbackQuestionDto } from './dto/update-feedback.dto';
-import { FeedbackQuestion } from './entities/feedback.entity';
+import { FeedbackQuestion } from './entities/feedback-question.entity';
 import { FeedbackService } from './feedback.service';
 
 type AuthUser = User & { student?: Student; staff?: Staff };
 
-@ApiTags('Feedback')
+@ApiController('Feedback', { requireAuth: true })
 @Controller('feedback')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class FeedbackController {
   constructor(private readonly feedbackService: FeedbackService) {}
 
   // ===== QUESTION MANAGEMENT (Staff Only) =====
 
   @Post('questions')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiCreateOperation(
     FeedbackQuestion,
@@ -80,7 +74,6 @@ export class FeedbackController {
   }
 
   @Patch('questions/:id')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiUpdateOperation(
     FeedbackQuestion,
@@ -94,7 +87,6 @@ export class FeedbackController {
   }
 
   @Delete('questions/:id')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.STAFF, UserRole.ADMIN)
   @ApiDeleteOperation(
     FeedbackQuestion,
@@ -107,7 +99,6 @@ export class FeedbackController {
   // ===== STUDENT FEEDBACK =====
 
   @Get('student/forms')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.STUDENT)
   @ApiOperation({
     summary: 'Get all feedback forms for a student',
@@ -130,7 +121,6 @@ export class FeedbackController {
   }
 
   @Post('submit')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.STUDENT)
   @ApiOperation({
     summary: 'Submit feedback for a teacher/course',
@@ -152,7 +142,7 @@ export class FeedbackController {
   // ===== STAFF VIEW RESPONSES =====
 
   @Get('responses')
-  @UseGuards(RolesGuard)
+  @Roles(UserRole.STAFF, UserRole.ADMIN)
   @StaffRoles(StaffRole.TEACHER, StaffRole.DEPT_HEAD)
   @ApiOperation({
     summary: 'Get feedback responses for a teacher (Staff only)',

@@ -5,11 +5,9 @@ import { Course } from '../course/entities/course.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { Student } from '../student/entities/student.entity';
 import { Term } from '../term/entities/term.entity';
-import {
-  FeedbackQuestion,
-  FeedbackResponse,
-  FeedbackSubmission,
-} from './entities/feedback.entity';
+import { FeedbackQuestion } from './entities/feedback-question.entity';
+import { FeedbackResponse } from './entities/feedback-response.entity';
+import { FeedbackSubmission } from './entities/feedback-submission.entity';
 import { FeedbackController } from './feedback.controller';
 import { FeedbackService } from './feedback.service';
 

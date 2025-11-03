@@ -11,7 +11,8 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { QuestionOption, QuestionType } from '../entities/feedback.entity';
+import { QuestionType } from '../../../common/enums/question-type.enum';
+import { QuestionOption } from '../../../common/types/question-option.enum';
 
 export class QuestionOptionDto implements QuestionOption {
   @ApiProperty({
