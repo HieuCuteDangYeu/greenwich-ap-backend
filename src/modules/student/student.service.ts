@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Class } from '../class/entities/class.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { StaffService } from '../staff/staff.service';
@@ -203,7 +203,7 @@ export class StudentService {
     }
 
     // Verify all classes exist
-    const classes = await this.classRepo.findByIds(classIds);
+    const classes = await this.classRepo.findBy({ id: In(classIds) });
     if (classes.length !== classIds.length) {
       throw new NotFoundException('One or more classes not found');
     }
