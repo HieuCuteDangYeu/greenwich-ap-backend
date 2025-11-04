@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Class } from '../class/entities/class.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { StaffService } from '../staff/staff.service';
@@ -41,26 +41,20 @@ export class StudentService {
       mentor = await this.staffService.findOne(dto.mentorId);
     }
 
-    // Check class
-    let classEnt: Class | null = null;
-    if (dto.classId) {
-      classEnt = await this.classRepo.findOne({ where: { id: dto.classId } });
-      if (!classEnt) throw new NotFoundException('Class not found');
-    }
-
     // Create new user
     const user = await this.userService.create({
       ...dto.user,
       roleId: (await this.userService.findRoleByName('Student')).id,
     });
 
-    // Create new student
+    // Create new student (without classes)
     try {
       const student = this.studentRepo.create({
         ...dto,
         studentCode,
         user,
         mentor,
+        classes: [], // Initialize empty classes array
       });
       return await this.studentRepo.save(student);
     } catch (error) {
@@ -76,7 +70,7 @@ export class StudentService {
       .leftJoinAndSelect('s.user', 'u')
       .leftJoinAndSelect('u.campus', 'campus')
       .leftJoinAndSelect('s.mentor', 'mentor')
-      .leftJoinAndSelect('s.class', 'class');
+      .leftJoinAndSelect('s.classes', 'classes');
 
     // Search by student code, full name or email
     if (opts?.search) {
@@ -119,25 +113,11 @@ export class StudentService {
   ): Promise<{ success: boolean }> {
     const student = await this.findOne(id);
 
-    // --- Update related User ---
-    if (dto.user) {
-      await this.userService.update(student.user.id, dto.user);
-    }
-
     // Update mentor
     if (dto.mentorId) {
       const mentor = await this.staffService.findOne(dto.mentorId);
       if (!mentor) throw new NotFoundException('Mentor not found');
       student.mentor = mentor;
-    }
-
-    // Update class
-    if (dto.classId) {
-      const existingClass = await this.classRepo.findOne({
-        where: { id: dto.classId },
-      });
-      if (!existingClass) throw new NotFoundException('Class not found');
-      student.class = existingClass;
     }
 
     // Update studentCode
@@ -153,7 +133,7 @@ export class StudentService {
 
     const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
       'faculty',
-      'startYear',
+      'currentYear',
       'startTerm',
       'endTerm',
       'status',
@@ -204,6 +184,71 @@ export class StudentService {
     await this.userService.updateStatus(student.user.id, status);
     await this.studentRepo.save(student);
     return { success: true };
+  }
+
+  // Assign classes to student
+  async assignClasses(studentId: number, classIds: number[]): Promise<Student> {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId },
+      relations: ['classes'],
+    });
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    // Verify all classes exist
+    const classes = await this.classRepo.findBy({ id: In(classIds) });
+    if (classes.length !== classIds.length) {
+      throw new NotFoundException('One or more classes not found');
+    }
+
+    // Get existing class IDs
+    const existingClassIds = student.classes.map((c) => Number(c.id));
+
+    // Add only new classes (avoid duplicates)
+    const newClasses = classes.filter(
+      (c) => !existingClassIds.includes(Number(c.id)),
+    );
+
+    student.classes = [...student.classes, ...newClasses];
+    return await this.studentRepo.save(student);
+  }
+
+  // Remove a class from student
+  async removeClass(studentId: number, classId: number): Promise<Student> {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId },
+      relations: ['classes'],
+    });
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    const classExists = student.classes.some((c) => Number(c.id) === classId);
+    if (!classExists) {
+      throw new NotFoundException(
+        `Class with ID ${classId} is not assigned to this student`,
+      );
+    }
+
+    student.classes = student.classes.filter((c) => Number(c.id) !== classId);
+    return await this.studentRepo.save(student);
+  }
+
+  // Get all classes for a student
+  async getStudentClasses(studentId: number): Promise<Class[]> {
+    const student = await this.studentRepo.findOne({
+      where: { id: studentId },
+      relations: ['classes'],
+    });
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+
+    return student.classes;
   }
 
   // Temporary

@@ -225,6 +225,28 @@ export class TermService {
     return { deleted: true };
   }
 
+  // Get current active term based on today's date
+  async getCurrentTerm(): Promise<Term> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    const term = await this.termRepo
+      .createQueryBuilder('term')
+      .leftJoinAndSelect('term.programme', 'programme')
+      .leftJoinAndSelect('term.departments', 'departments')
+      .where('term.start_date IS NOT NULL')
+      .andWhere('term.end_date IS NOT NULL')
+      .andWhere('term.start_date <= :today', { today })
+      .andWhere('term.end_date >= :today', { today })
+      .orderBy('term.start_date', 'DESC')
+      .getOne();
+
+    if (!term) {
+      throw new NotFoundException('No active term found for the current date.');
+    }
+
+    return term;
+  }
+
   private async loadDepartments(ids?: number[]) {
     if (!ids || ids.length === 0) {
       return [];

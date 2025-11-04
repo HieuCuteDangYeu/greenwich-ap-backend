@@ -193,8 +193,8 @@ export class FeedbackController {
   // ===== STAFF VIEW RESPONSES =====
 
   @Get('responses')
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
-  @StaffRoles(StaffRole.TEACHER, StaffRole.DEPT_HEAD)
+  @Roles(UserRole.STAFF)
+  @StaffRoles(StaffRole.TEACHER)
   @ApiOperation({
     summary: 'Get feedback responses for a teacher (Staff only)',
     description: 'Teachers can view feedback they received',

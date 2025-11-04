@@ -48,15 +48,6 @@ export class CreateStudentDto {
   mentorId?: number;
 
   @ApiProperty({
-    description: 'Class ID',
-    required: false,
-    example: 1,
-  })
-  @IsOptional()
-  @IsNumber()
-  classId?: number;
-
-  @ApiProperty({
     description: 'Faculty name',
     example: 'Computing',
     required: true,
@@ -76,12 +67,12 @@ export class CreateStudentDto {
   status?: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED';
 
   @ApiProperty({
-    description: 'Start year',
+    description: 'Current year',
     example: '1',
   })
   @IsNotEmpty()
   @IsString()
-  startYear!: string;
+  currentYear!: string;
 
   @ApiProperty({
     description: 'Start term',

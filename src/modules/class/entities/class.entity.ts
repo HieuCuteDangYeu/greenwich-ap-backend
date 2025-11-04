@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -17,7 +18,7 @@ export class Class {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @OneToMany(() => Student, (student) => student.class)
+  @ManyToMany(() => Student, (student) => student.classes)
   students: Student[];
 
   @OneToMany(() => ClassCourse, (classCourse) => classCourse.class)
