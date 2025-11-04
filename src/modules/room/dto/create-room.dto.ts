@@ -21,6 +21,10 @@ export class CreateRoomDto {
   @Min(0)
   capacity!: number;
 
+  @ApiProperty({ description: 'Floor where the room is located' })
+  @IsInt()
+  floor!: number;
+
   @ApiProperty({ description: 'Optional note about the room', required: false })
   @IsOptional()
   @IsString()

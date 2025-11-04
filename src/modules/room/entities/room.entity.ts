@@ -7,8 +7,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Campus } from '../../user/entities/campus.entity';
 import { ClassSession } from '../../class/entities/class-session.entity';
+import { Campus } from '../../user/entities/campus.entity';
 
 @Entity({ name: 'room' })
 export class Room {
@@ -35,6 +35,10 @@ export class Room {
   @ApiProperty({ description: 'Room capacity (number of seats)' })
   @Column({ type: 'int' })
   capacity!: number;
+
+  @ApiProperty({ description: 'Floor where the room is located' })
+  @Column({ type: 'int' })
+  floor!: number;
 
   @ApiProperty({
     description: 'Optional notes about the room',

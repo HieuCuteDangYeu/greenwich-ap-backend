@@ -5,10 +5,10 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Room } from './entities/room.entity';
+import { Campus } from '../user/entities/campus.entity';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
-import { Campus } from '../user/entities/campus.entity';
+import { Room } from './entities/room.entity';
 
 @Injectable()
 export class RoomService {
@@ -72,6 +72,7 @@ export class RoomService {
       code: dto.code,
       name: dto.name,
       capacity: dto.capacity,
+      floor: dto.floor,
       note: dto.note ?? null,
     });
 
@@ -107,6 +108,7 @@ export class RoomService {
     if (dto.code !== undefined) room.code = dto.code;
     if (dto.name !== undefined) room.name = dto.name;
     if (dto.capacity !== undefined) room.capacity = dto.capacity;
+    if (dto.floor !== undefined) room.floor = dto.floor;
     if (dto.note !== undefined) room.note = dto.note ?? null;
 
     try {
