@@ -202,32 +202,36 @@ export class FeedbackService {
     studentId: number,
     termId?: number,
   ): Promise<StudentFeedbackFormsResponseDto> {
-    // Get student with their class
+    // Get student with their classes
     const student = await this.studentRepository.findOne({
       where: { id: studentId },
-      relations: ['class', 'user'],
+      relations: ['classes', 'user'],
     });
 
     if (!student) {
       throw new NotFoundException(`Student with ID ${studentId} not found`);
     }
 
-    if (!student.classId) {
+    if (!student.classes || student.classes.length === 0) {
       return { forms: [], questions: [] };
     }
 
     // Get active questions
     const questions = await this.findAllQuestions(false);
 
-    // Get all courses for the student's class
-    const classEntity = await this.classRepository.findOne({
-      where: { id: student.classId },
+    // Get all courses for all of the student's classes
+    const classIds = student.classes.map((c) => Number(c.id));
+    const classes = await this.classRepository.find({
+      where: { id: In(classIds) },
       relations: ['classCourses', 'classCourses.course'],
     });
 
-    if (!classEntity || !classEntity.classCourses) {
+    if (!classes || classes.length === 0) {
       return { forms: [], questions: [] };
     }
+
+    // Collect all class courses from all classes
+    const allClassCourses = classes.flatMap((c) => c.classCourses || []);
 
     // Get terms (filter by termId if provided)
     const termWhere = termId ? { id: termId } : {};
@@ -237,8 +241,10 @@ export class FeedbackService {
       return { forms: [], questions: [] };
     }
 
-    // Get all courses with teachers
-    const courseIds = classEntity.classCourses.map((cc) => cc.course.id);
+    // Get all unique courses from all classes
+    const courseIds = Array.from(
+      new Set(allClassCourses.map((cc) => cc.course.id)),
+    );
     const courses = await this.courseRepository.find({
       where: { id: In(courseIds) },
     });
@@ -257,6 +263,18 @@ export class FeedbackService {
     const teacherMap = new Map(
       teachers.filter((t) => t.role?.role === 'TEACHER').map((t) => [t.id, t]),
     );
+
+    // Create a map of course to classes
+    const courseToClassesMap = new Map<number, Class[]>();
+    for (const classEntity of classes) {
+      for (const classCourse of classEntity.classCourses || []) {
+        const courseId = Number(classCourse.course.id);
+        if (!courseToClassesMap.has(courseId)) {
+          courseToClassesMap.set(courseId, []);
+        }
+        courseToClassesMap.get(courseId)!.push(classEntity);
+      }
+    }
 
     // Get existing submissions
     const submissions = await this.feedbackSubmissionRepository.find({
@@ -279,19 +297,25 @@ export class FeedbackService {
       for (const course of courses) {
         if (course.teacherId && teacherMap.has(course.teacherId)) {
           const teacher = teacherMap.get(course.teacherId)!;
-          const key = `${teacher.id}-${course.id}-${classEntity.id}-${term.id}`;
+          const classesForCourse =
+            courseToClassesMap.get(Number(course.id)) || [];
 
-          forms.push({
-            staffId: teacher.id,
-            teacherName: `${teacher.user?.fullName || 'Unknown'}`,
-            staffCode: teacher.staffCode,
-            courseId: course.id,
-            courseName: course.title,
-            classCode: `${classEntity.name}`,
-            classId: classEntity.id,
-            termId: term.id,
-            isSubmitted: submissionSet.has(key),
-          });
+          // Create a form for each class that has this course
+          for (const classEntity of classesForCourse) {
+            const key = `${teacher.id}-${course.id}-${classEntity.id}-${term.id}`;
+
+            forms.push({
+              staffId: teacher.id,
+              teacherName: `${teacher.user?.fullName || 'Unknown'}`,
+              staffCode: teacher.staffCode,
+              courseId: course.id,
+              courseName: course.title,
+              classCode: `${classEntity.name}`,
+              classId: classEntity.id,
+              termId: term.id,
+              isSubmitted: submissionSet.has(key),
+            });
+          }
         }
       }
     }

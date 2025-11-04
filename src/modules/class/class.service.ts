@@ -91,9 +91,7 @@ export class ClassService {
     const savedSession = await this.classSessionRepository.save(newSession);
 
     // Get all students in this class
-    const students = await this.studentRepository.find({
-      where: { class: { id: classId } },
-    });
+    const students = await this.findStudentsByClass(classId);
 
     // Create attendance records for all students
     if (students.length > 0) {
@@ -319,10 +317,8 @@ export class ClassService {
   }
 
   async findStudentsByClass(id: number) {
-    const classEntity = await this.findOne(id);
-    return this.studentRepository.find({
-      where: { class: { id: classEntity.id } },
-    });
+    const classEntity = await this.findOne(id, ['students']);
+    return classEntity.students || [];
   }
 
   async findCoursesByClass(id: number) {

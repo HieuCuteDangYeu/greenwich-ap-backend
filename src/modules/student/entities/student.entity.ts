@@ -4,6 +4,8 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -26,13 +28,14 @@ export class Student {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @ManyToOne(() => Class, (c) => c.students, { nullable: true })
-  @JoinColumn({ name: 'class_id' })
-  class?: Class;
-
-  @ApiProperty({ description: 'Class (Class reference)', required: false })
-  @Column({ name: 'class_id', type: 'bigint', nullable: true })
-  classId?: number | null;
+  @ApiProperty({ description: 'Classes assigned to this student' })
+  @ManyToMany(() => Class, (classEntity) => classEntity.students)
+  @JoinTable({
+    name: 'student_class',
+    joinColumn: { name: 'student_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'class_id', referencedColumnName: 'id' },
+  })
+  classes!: Class[];
 
   @ApiProperty()
   @Column({
