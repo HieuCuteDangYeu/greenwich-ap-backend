@@ -189,6 +189,12 @@ export class AttendanceService {
     return { deleted: true };
   }
 
+  // DELETE all attendance records for a session
+  async removeBySession(sessionId: number): Promise<{ deleted: number }> {
+    const result = await this.attendanceRepo.delete({ sessionId });
+    return { deleted: result.affected || 0 };
+  }
+
   // BULK CREATE - Create attendance for multiple students in one session
   async createBulk(dto: CreateBulkAttendanceDto): Promise<{
     created: Attendance[];

@@ -3,19 +3,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateClassDto } from './dto/create-class.dto';
-import { UpdateClassDto } from './dto/update-class.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Class } from './entities/class.entity';
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
-import { AddCourseDto } from './dto/add-course.dto';
-import { ClassCourse } from './entities/class-course.entity';
+import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import { AttendanceService } from '../attendance/attendance.service';
 import { Course } from '../course/entities/course.entity';
-import { Student } from '../student/entities/student.entity';
-import { ClassSession } from './entities/class-session.entity';
-import { CreateClassSessionDto } from './dto/create-class-session.dto';
-import { UpdateClassSessionDto } from './dto/update-class-session.dto';
 import { Room } from '../room/entities/room.entity';
+import { Student } from '../student/entities/student.entity';
+import { AddCourseDto } from './dto/add-course.dto';
+import { CreateClassSessionDto } from './dto/create-class-session.dto';
+import { CreateClassDto } from './dto/create-class.dto';
+import { UpdateClassSessionDto } from './dto/update-class-session.dto';
+import { UpdateClassDto } from './dto/update-class.dto';
+import { ClassCourse } from './entities/class-course.entity';
+import { ClassSession } from './entities/class-session.entity';
+import { Class } from './entities/class.entity';
 
 @Injectable()
 export class ClassService {
@@ -32,6 +33,7 @@ export class ClassService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+    private readonly attendanceService: AttendanceService,
   ) {}
 
   create(createClassDto: CreateClassDto) {
@@ -86,7 +88,27 @@ export class ClassService {
       status: createSessionDto.status ?? 'SCHEDULED',
     });
 
-    return this.classSessionRepository.save(newSession);
+    const savedSession = await this.classSessionRepository.save(newSession);
+
+    // Get all students in this class
+    const students = await this.studentRepository.find({
+      where: { class: { id: classId } },
+    });
+
+    // Create attendance records for all students
+    if (students.length > 0) {
+      const studentIds = students.map((student) => Number(student.id));
+
+      await this.attendanceService.createBulk({
+        sessionId: savedSession.id,
+        students: studentIds.map((studentId) => ({
+          studentId,
+          status: 'PENDING',
+        })),
+      });
+    }
+
+    return savedSession;
   }
 
   findSessions(
@@ -187,6 +209,11 @@ export class ClassService {
 
   async removeSession(classId: number, sessionId: number) {
     const session = await this.findSession(classId, sessionId);
+
+    // Delete all attendance records for this session
+    await this.attendanceService.removeBySession(sessionId);
+
+    // Delete the session
     await this.classSessionRepository.remove(session);
     return { deleted: true };
   }
