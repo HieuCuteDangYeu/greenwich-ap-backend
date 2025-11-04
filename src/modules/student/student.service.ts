@@ -131,7 +131,7 @@ export class StudentService {
       student.studentCode = dto.studentCode;
     }
 
-    const updateFields: (keyof Omit<UpdateStudentDto, 'user' | 'classId'>)[] = [
+    const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
       'faculty',
       'currentYear',
       'startTerm',
