@@ -48,6 +48,10 @@ class StaffDto {
   @Expose()
   staffCode: string;
 
+  @ApiProperty()
+  @Expose()
+  faculty: string;
+
   @ApiProperty({ type: StaffRoleDto })
   @Expose()
   @Type(() => StaffRoleDto)

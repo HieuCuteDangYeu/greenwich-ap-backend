@@ -119,11 +119,6 @@ export class StudentService {
   ): Promise<{ success: boolean }> {
     const student = await this.findOne(id);
 
-    // --- Update related User ---
-    if (dto.user) {
-      await this.userService.update(student.user.id, dto.user);
-    }
-
     // Update mentor
     if (dto.mentorId) {
       const mentor = await this.staffService.findOne(dto.mentorId);
@@ -151,9 +146,14 @@ export class StudentService {
       student.studentCode = dto.studentCode;
     }
 
+    // --- Update related User ---
+    if (dto.user) {
+      await this.userService.update(student.user.id, dto.user);
+    }
+
     const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
       'faculty',
-      'startYear',
+      'currentYear',
       'startTerm',
       'endTerm',
       'status',

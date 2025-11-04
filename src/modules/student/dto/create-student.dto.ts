@@ -76,12 +76,12 @@ export class CreateStudentDto {
   status?: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED';
 
   @ApiProperty({
-    description: 'Start year',
+    description: 'Current year',
     example: '1',
   })
   @IsNotEmpty()
   @IsString()
-  startYear!: string;
+  currentYear!: string;
 
   @ApiProperty({
     description: 'Start term',

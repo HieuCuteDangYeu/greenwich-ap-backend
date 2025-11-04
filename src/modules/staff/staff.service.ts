@@ -102,11 +102,6 @@ export class StaffService {
   async update(id: number, dto: UpdateStaffDto): Promise<{ success: boolean }> {
     const staff = await this.findOne(id);
 
-    // Update related User
-    if (dto.user) {
-      await this.userService.update(staff.user.id, dto.user);
-    }
-
     // Update staff role
     if (dto.staffRole?.role) {
       await this.setStaffRole(staff.id, dto.staffRole.role);
@@ -121,6 +116,11 @@ export class StaffService {
         throw new BadRequestException('Staff code already exists');
       }
       staff.staffCode = dto.staffCode;
+    }
+
+    // Update related User
+    if (dto.user) {
+      await this.userService.update(staff.user.id, dto.user);
     }
 
     const updateFields: (keyof Omit<UpdateStaffDto, 'user' | 'staffRole'>)[] = [

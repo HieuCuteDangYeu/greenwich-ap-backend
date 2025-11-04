@@ -72,7 +72,7 @@ export class Student {
 
   @ApiProperty()
   @Column({ type: 'varchar', length: 20, nullable: false })
-  startYear!: string;
+  currentYear!: string;
 
   @ApiProperty()
   @Column({ type: 'varchar', length: 20, nullable: false })

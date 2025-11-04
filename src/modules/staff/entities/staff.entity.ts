@@ -41,6 +41,10 @@ export class Staff {
   })
   staffCode!: string;
 
+  @ApiProperty()
+  @Column({ type: 'varchar', length: 150, nullable: false })
+  faculty!: string;
+
   @ApiProperty({ description: 'Hire Date' })
   @Column({ name: 'hire_date', type: 'timestamp', nullable: false })
   hireDate!: Date;
