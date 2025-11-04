@@ -10,7 +10,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
@@ -20,18 +21,16 @@ import {
   ApiPaginationQuery,
   ApiUpdateOperation,
 } from '../../common/decorators/swagger.decorator';
+import { UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { TermService } from './term.service';
 import { CreateTermDto } from './dto/create-term.dto';
 import { UpdateTermDto } from './dto/update-term.dto';
 import { Term } from './entities/term.entity';
-import { UserRole } from '../../common/enums/roles.enum';
-@ApiController('Terms')
+import { TermService } from './term.service';
+@ApiController('Terms', { requireAuth: true })
 @Controller('terms')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth('access-token')
 export class TermController {
   constructor(private readonly svc: TermService) {}
 
@@ -75,6 +74,17 @@ export class TermController {
       sort,
       order,
     });
+  }
+
+  @Get('current/active')
+  @Roles(UserRole.ADMIN, UserRole.GUARDIAN, UserRole.STAFF, UserRole.STUDENT)
+  @ApiOperation({
+    summary: 'Get the current active term',
+    description:
+      "Returns the term that is currently active based on today's date",
+  })
+  getCurrentTerm() {
+    return this.svc.getCurrentTerm();
   }
 
   @Get(':id')

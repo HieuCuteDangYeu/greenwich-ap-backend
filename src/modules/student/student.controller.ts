@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -9,6 +10,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiController,
@@ -23,6 +25,7 @@ import { UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { UpdateUserStatusDto } from '../user/dto/update-user-status.dto';
+import { AssignClassesDto } from './dto/assign-classes.dto';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
 import { Student } from './entities/student.entity';
@@ -86,5 +89,35 @@ export class StudentController {
     @Body() body: UpdateUserStatusDto,
   ) {
     return this.studentService.updateStudentStatus(id, body.status);
+  }
+
+  // Assign classes to student
+  @Post(':id/classes')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Assign classes to a student' })
+  async assignClasses(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AssignClassesDto,
+  ) {
+    return this.studentService.assignClasses(id, dto.classIds);
+  }
+
+  // Get all classes for a student
+  @Get(':id/classes')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all classes assigned to a student' })
+  async getStudentClasses(@Param('id', ParseIntPipe) id: number) {
+    return this.studentService.getStudentClasses(id);
+  }
+
+  // Remove a class from student
+  @Delete(':id/classes/:classId')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Remove a class from a student' })
+  async removeClass(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('classId', ParseIntPipe) classId: number,
+  ) {
+    return this.studentService.removeClass(id, classId);
   }
 }

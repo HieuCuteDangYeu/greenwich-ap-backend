@@ -424,7 +424,9 @@ export class AttendanceService {
       .leftJoinAndSelect('student.user', 'user');
 
     if (classId) {
-      studentQuery.andWhere('student.class_id = :classId', { classId });
+      studentQuery
+        .innerJoin('student.classes', 'class')
+        .andWhere('class.id = :classId', { classId });
     }
 
     const students = await studentQuery.getMany();
@@ -510,29 +512,32 @@ export class AttendanceService {
       );
     }
 
-    // Verify student exists and get their class (optimized: only fetch needed fields)
+    // Verify student exists and get their classes
     const student = await this.studentRepo.findOne({
       where: { id: studentId },
-      select: ['id', 'classId'],
+      relations: ['classes'],
     });
 
     if (!student) {
       throw new NotFoundException('Student not found');
     }
 
-    if (!student.classId) {
+    if (!student.classes || student.classes.length === 0) {
       throw new BadRequestException('Student is not assigned to any class');
     }
 
+    // Get all class IDs for the student
+    const classIds = student.classes.map((c) => Number(c.id));
+
     // Optimized: Get sessions and attendance separately but efficiently
-    // First get all sessions
+    // First get all sessions for all of the student's classes
     const sessions = await this.sessionRepo
       .createQueryBuilder('session')
       .leftJoinAndSelect('session.class', 'class')
       .leftJoinAndSelect('session.course', 'course')
       .leftJoinAndSelect('session.room', 'room')
       .leftJoinAndSelect('session.timeSlots', 'timeSlots')
-      .where('session.class_id = :classId', { classId: student.classId })
+      .where('session.class_id IN (:...classIds)', { classIds })
       .andWhere('session.date_on >= :startDate', { startDate })
       .andWhere('session.date_on <= :endDate', { endDate })
       .orderBy('session.date_on', 'ASC')
