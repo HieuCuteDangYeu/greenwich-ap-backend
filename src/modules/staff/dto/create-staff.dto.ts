@@ -40,6 +40,15 @@ export class CreateStaffDto {
   @IsOptional()
   staffRole?: SetStaffRoleDto;
 
+  @ApiProperty({
+    description: 'Faculty name',
+    example: 'Computing',
+    required: true,
+  })
+  @IsNotEmpty()
+  @IsString()
+  faculty!: string;
+
   @ApiProperty({ required: true, example: '2023-09-01' })
   @IsNotEmpty()
   @IsDateString()
