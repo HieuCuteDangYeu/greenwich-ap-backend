@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { QuestionOption } from '../../common/types/question-option.enum';
 import { Class } from '../class/entities/class.entity';
 import { Course } from '../course/entities/course.entity';
@@ -42,6 +42,7 @@ export class FeedbackService {
     private classRepository: Repository<Class>,
     @InjectRepository(Term)
     private termRepository: Repository<Term>,
+    private dataSource: DataSource,
   ) {}
 
   private validateQuestionOptions(options: QuestionOption[]): void {
@@ -66,6 +67,86 @@ export class FeedbackService {
         );
       }
     }
+  }
+
+  // Validate that all required entities exist
+  private async validateFeedbackEntities(
+    studentId: number,
+    dto: SubmitFeedbackDto,
+  ): Promise<{
+    student: Student;
+    staff: Staff;
+    course: Course;
+    classEntity: Class;
+    term: Term;
+  }> {
+    const [student, staff, course, classEntity, term] = await Promise.all([
+      this.studentRepository.findOne({ where: { id: studentId } }),
+      this.staffRepository.findOne({
+        where: { id: dto.staffId },
+        relations: ['role'],
+      }),
+      this.courseRepository.findOne({ where: { id: dto.courseId } }),
+      this.classRepository.findOne({ where: { id: dto.classId } }),
+      this.termRepository.findOne({ where: { id: dto.termId } }),
+    ]);
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+    if (!staff) {
+      throw new NotFoundException(`Staff with ID ${dto.staffId} not found`);
+    }
+    if (staff.role?.role !== 'TEACHER') {
+      throw new BadRequestException('Staff member is not a teacher');
+    }
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
+    }
+    if (!classEntity) {
+      throw new NotFoundException(`Class with ID ${dto.classId} not found`);
+    }
+    if (!term) {
+      throw new NotFoundException(`Term with ID ${dto.termId} not found`);
+    }
+
+    return { student, staff, course, classEntity, term };
+  }
+
+  // Validate questions and their answers
+  private async validateQuestionsAndAnswers(
+    dto: SubmitFeedbackDto,
+  ): Promise<Map<number, FeedbackQuestion>> {
+    const questionIds = dto.answers.map((a) => a.questionId);
+    const questions = await this.feedbackQuestionRepository.find({
+      where: { id: In(questionIds), isActive: true },
+    });
+
+    if (questions.length !== questionIds.length) {
+      throw new BadRequestException('Some questions are invalid or inactive');
+    }
+
+    // Create a map of questions for easy lookup (convert string IDs to numbers)
+    const questionMap = new Map(questions.map((q) => [Number(q.id), q]));
+
+    // Validate that each answer's selected option matches the question's available options
+    for (const answer of dto.answers) {
+      const question = questionMap.get(answer.questionId);
+      if (!question) {
+        throw new BadRequestException(
+          `Question with ID ${answer.questionId} not found`,
+        );
+      }
+
+      const validOptions = question.options.map((opt) => opt.value);
+      if (!validOptions.includes(answer.selectedOption)) {
+        throw new BadRequestException(
+          `Invalid option "${answer.selectedOption}" for question "${question.questionText}". Valid options are: ${validOptions.join(', ')}`,
+        );
+      }
+    }
+
+    return questionMap;
   }
 
   async createQuestion(
@@ -233,36 +314,8 @@ export class FeedbackService {
     studentId: number,
     dto: SubmitFeedbackDto,
   ): Promise<{ message: string; submissionId: number }> {
-    // Verify entities exist
-    const [student, staff, course, classEntity, term] = await Promise.all([
-      this.studentRepository.findOne({ where: { id: studentId } }),
-      this.staffRepository.findOne({
-        where: { id: dto.staffId },
-        relations: ['role'],
-      }),
-      this.courseRepository.findOne({ where: { id: dto.courseId } }),
-      this.classRepository.findOne({ where: { id: dto.classId } }),
-      this.termRepository.findOne({ where: { id: dto.termId } }),
-    ]);
-
-    if (!student) {
-      throw new NotFoundException(`Student with ID ${studentId} not found`);
-    }
-    if (!staff) {
-      throw new NotFoundException(`Staff with ID ${dto.staffId} not found`);
-    }
-    if (staff.role?.role !== 'TEACHER') {
-      throw new BadRequestException('Staff member is not a teacher');
-    }
-    if (!course) {
-      throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
-    }
-    if (!classEntity) {
-      throw new NotFoundException(`Class with ID ${dto.classId} not found`);
-    }
-    if (!term) {
-      throw new NotFoundException(`Term with ID ${dto.termId} not found`);
-    }
+    // Validate all entities exist
+    await this.validateFeedbackEntities(studentId, dto);
 
     // Check if already submitted
     const existingSubmission = await this.feedbackSubmissionRepository.findOne({
@@ -280,35 +333,8 @@ export class FeedbackService {
       );
     }
 
-    // Verify all questions are active and validate answer options
-    const questionIds = dto.answers.map((a) => a.questionId);
-    const questions = await this.feedbackQuestionRepository.find({
-      where: { id: In(questionIds), isActive: true },
-    });
-
-    if (questions.length !== questionIds.length) {
-      throw new BadRequestException('Some questions are invalid or inactive');
-    }
-
-    // Create a map of questions for easy lookup (convert string IDs to numbers)
-    const questionMap = new Map(questions.map((q) => [Number(q.id), q]));
-
-    // Validate that each answer's selected option matches the question's available options
-    for (const answer of dto.answers) {
-      const question = questionMap.get(answer.questionId);
-      if (!question) {
-        throw new BadRequestException(
-          `Question with ID ${answer.questionId} not found`,
-        );
-      }
-
-      const validOptions = question.options.map((opt) => opt.value);
-      if (!validOptions.includes(answer.selectedOption)) {
-        throw new BadRequestException(
-          `Invalid option "${answer.selectedOption}" for question "${question.questionText}". Valid options are: ${validOptions.join(', ')}`,
-        );
-      }
-    }
+    // Validate questions and answers
+    await this.validateQuestionsAndAnswers(dto);
 
     // Save responses
     const responses = dto.answers.map((answer) => {
@@ -349,36 +375,8 @@ export class FeedbackService {
     studentId: number,
     dto: SubmitFeedbackDto,
   ): Promise<{ message: string; submissionId: number }> {
-    // Verify entities exist
-    const [student, staff, course, classEntity, term] = await Promise.all([
-      this.studentRepository.findOne({ where: { id: studentId } }),
-      this.staffRepository.findOne({
-        where: { id: dto.staffId },
-        relations: ['role'],
-      }),
-      this.courseRepository.findOne({ where: { id: dto.courseId } }),
-      this.classRepository.findOne({ where: { id: dto.classId } }),
-      this.termRepository.findOne({ where: { id: dto.termId } }),
-    ]);
-
-    if (!student) {
-      throw new NotFoundException(`Student with ID ${studentId} not found`);
-    }
-    if (!staff) {
-      throw new NotFoundException(`Staff with ID ${dto.staffId} not found`);
-    }
-    if (staff.role?.role !== 'TEACHER') {
-      throw new BadRequestException('Staff member is not a teacher');
-    }
-    if (!course) {
-      throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
-    }
-    if (!classEntity) {
-      throw new NotFoundException(`Class with ID ${dto.classId} not found`);
-    }
-    if (!term) {
-      throw new NotFoundException(`Term with ID ${dto.termId} not found`);
-    }
+    // Validate all entities exist
+    await this.validateFeedbackEntities(studentId, dto);
 
     // Check if submission exists
     const existingSubmission = await this.feedbackSubmissionRepository.findOne({
@@ -396,69 +394,59 @@ export class FeedbackService {
       );
     }
 
-    // Verify all questions are active and validate answer options
-    const questionIds = dto.answers.map((a) => a.questionId);
-    const questions = await this.feedbackQuestionRepository.find({
-      where: { id: In(questionIds), isActive: true },
-    });
+    // Validate questions and answers
+    await this.validateQuestionsAndAnswers(dto);
 
-    if (questions.length !== questionIds.length) {
-      throw new BadRequestException('Some questions are invalid or inactive');
-    }
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    // Create a map of questions for easy lookup (convert string IDs to numbers)
-    const questionMap = new Map(questions.map((q) => [Number(q.id), q]));
-
-    // Validate that each answer's selected option matches the question's available options
-    for (const answer of dto.answers) {
-      const question = questionMap.get(answer.questionId);
-      if (!question) {
-        throw new BadRequestException(
-          `Question with ID ${answer.questionId} not found`,
-        );
-      }
-
-      const validOptions = question.options.map((opt) => opt.value);
-      if (!validOptions.includes(answer.selectedOption)) {
-        throw new BadRequestException(
-          `Invalid option "${answer.selectedOption}" for question "${question.questionText}". Valid options are: ${validOptions.join(', ')}`,
-        );
-      }
-    }
-
-    // Delete existing responses
-    await this.feedbackResponseRepository.delete({
-      studentId,
-      staffId: dto.staffId,
-      courseId: dto.courseId,
-      classId: dto.classId,
-      termId: dto.termId,
-    });
-
-    // Save new responses
-    const responses = dto.answers.map((answer) => {
-      return this.feedbackResponseRepository.create({
+    try {
+      // Delete existing responses
+      await queryRunner.manager.delete(FeedbackResponse, {
         studentId,
         staffId: dto.staffId,
         courseId: dto.courseId,
         classId: dto.classId,
         termId: dto.termId,
-        questionId: answer.questionId,
-        selectedOption: answer.selectedOption,
       });
-    });
 
-    await this.feedbackResponseRepository.save(responses);
+      // Save new responses
+      const responses = dto.answers.map((answer) => {
+        return queryRunner.manager.create(FeedbackResponse, {
+          studentId,
+          staffId: dto.staffId,
+          courseId: dto.courseId,
+          classId: dto.classId,
+          termId: dto.termId,
+          questionId: answer.questionId,
+          selectedOption: answer.selectedOption,
+        });
+      });
 
-    // Update submission record with new notes and timestamp
-    existingSubmission.notes = dto.notes;
-    existingSubmission.submittedAt = new Date();
-    await this.feedbackSubmissionRepository.save(existingSubmission);
+      await queryRunner.manager.save(FeedbackResponse, responses);
 
-    return {
-      message: 'Feedback updated successfully',
-      submissionId: existingSubmission.id,
-    };
+      // Update submission record with new notes and timestamp
+      existingSubmission.notes = dto.notes;
+      existingSubmission.submittedAt = new Date();
+      await queryRunner.manager.save(FeedbackSubmission, existingSubmission);
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return {
+        message: 'Feedback updated successfully',
+        submissionId: existingSubmission.id,
+      };
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
   }
 
   // Get submitted feedback

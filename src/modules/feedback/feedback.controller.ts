@@ -171,7 +171,7 @@ export class FeedbackController {
     );
   }
 
-  @Patch('submit')
+  @Patch('submission')
   @Roles(UserRole.STUDENT)
   @ApiOperation({
     summary: 'Update submitted feedback for a teacher/course',
