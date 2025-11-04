@@ -48,15 +48,6 @@ export class CreateStudentDto {
   mentorId?: number;
 
   @ApiProperty({
-    description: 'Class ID',
-    required: false,
-    example: 1,
-  })
-  @IsOptional()
-  @IsNumber()
-  classId?: number;
-
-  @ApiProperty({
     description: 'Faculty name',
     example: 'Computing',
     required: true,
