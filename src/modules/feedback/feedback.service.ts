@@ -344,6 +344,174 @@ export class FeedbackService {
     };
   }
 
+  // Update feedback
+  async updateFeedback(
+    studentId: number,
+    dto: SubmitFeedbackDto,
+  ): Promise<{ message: string; submissionId: number }> {
+    // Verify entities exist
+    const [student, staff, course, classEntity, term] = await Promise.all([
+      this.studentRepository.findOne({ where: { id: studentId } }),
+      this.staffRepository.findOne({
+        where: { id: dto.staffId },
+        relations: ['role'],
+      }),
+      this.courseRepository.findOne({ where: { id: dto.courseId } }),
+      this.classRepository.findOne({ where: { id: dto.classId } }),
+      this.termRepository.findOne({ where: { id: dto.termId } }),
+    ]);
+
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${studentId} not found`);
+    }
+    if (!staff) {
+      throw new NotFoundException(`Staff with ID ${dto.staffId} not found`);
+    }
+    if (staff.role?.role !== 'TEACHER') {
+      throw new BadRequestException('Staff member is not a teacher');
+    }
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${dto.courseId} not found`);
+    }
+    if (!classEntity) {
+      throw new NotFoundException(`Class with ID ${dto.classId} not found`);
+    }
+    if (!term) {
+      throw new NotFoundException(`Term with ID ${dto.termId} not found`);
+    }
+
+    // Check if submission exists
+    const existingSubmission = await this.feedbackSubmissionRepository.findOne({
+      where: {
+        studentId,
+        staffId: dto.staffId,
+        courseId: dto.courseId,
+        termId: dto.termId,
+      },
+    });
+
+    if (!existingSubmission) {
+      throw new NotFoundException(
+        'Feedback submission not found. Please submit feedback first.',
+      );
+    }
+
+    // Verify all questions are active and validate answer options
+    const questionIds = dto.answers.map((a) => a.questionId);
+    const questions = await this.feedbackQuestionRepository.find({
+      where: { id: In(questionIds), isActive: true },
+    });
+
+    if (questions.length !== questionIds.length) {
+      throw new BadRequestException('Some questions are invalid or inactive');
+    }
+
+    // Create a map of questions for easy lookup (convert string IDs to numbers)
+    const questionMap = new Map(questions.map((q) => [Number(q.id), q]));
+
+    // Validate that each answer's selected option matches the question's available options
+    for (const answer of dto.answers) {
+      const question = questionMap.get(answer.questionId);
+      if (!question) {
+        throw new BadRequestException(
+          `Question with ID ${answer.questionId} not found`,
+        );
+      }
+
+      const validOptions = question.options.map((opt) => opt.value);
+      if (!validOptions.includes(answer.selectedOption)) {
+        throw new BadRequestException(
+          `Invalid option "${answer.selectedOption}" for question "${question.questionText}". Valid options are: ${validOptions.join(', ')}`,
+        );
+      }
+    }
+
+    // Delete existing responses
+    await this.feedbackResponseRepository.delete({
+      studentId,
+      staffId: dto.staffId,
+      courseId: dto.courseId,
+      classId: dto.classId,
+      termId: dto.termId,
+    });
+
+    // Save new responses
+    const responses = dto.answers.map((answer) => {
+      return this.feedbackResponseRepository.create({
+        studentId,
+        staffId: dto.staffId,
+        courseId: dto.courseId,
+        classId: dto.classId,
+        termId: dto.termId,
+        questionId: answer.questionId,
+        selectedOption: answer.selectedOption,
+      });
+    });
+
+    await this.feedbackResponseRepository.save(responses);
+
+    // Update submission record with new notes and timestamp
+    existingSubmission.notes = dto.notes;
+    existingSubmission.submittedAt = new Date();
+    await this.feedbackSubmissionRepository.save(existingSubmission);
+
+    return {
+      message: 'Feedback updated successfully',
+      submissionId: existingSubmission.id,
+    };
+  }
+
+  // Get submitted feedback
+  async getSubmittedFeedback(
+    studentId: number,
+    staffId: number,
+    courseId: number,
+    termId: number,
+  ) {
+    // Find the submission
+    const submission = await this.feedbackSubmissionRepository.findOne({
+      where: {
+        studentId,
+        staffId,
+        courseId,
+        termId,
+      },
+    });
+
+    if (!submission) {
+      throw new NotFoundException(
+        'No feedback submission found for this teacher/course combination',
+      );
+    }
+
+    // Get all responses for this submission
+    const responses = await this.feedbackResponseRepository.find({
+      where: {
+        studentId,
+        staffId,
+        courseId,
+        termId,
+      },
+      relations: ['question'],
+    });
+
+    // Transform responses into the SubmitFeedbackDto format
+    const answers = responses.map((response) => ({
+      questionId: Number(response.questionId),
+      selectedOption: response.selectedOption,
+    }));
+
+    return {
+      staffId: Number(submission.staffId),
+      courseId: Number(submission.courseId),
+      classId: Number(submission.classId),
+      termId: Number(submission.termId),
+      notes: submission.notes || '',
+      answers,
+      submittedAt: submission.submittedAt,
+    };
+  }
+
   // Get feedback responses for a teacher/course (for staff to view)
   async getFeedbackResponses(
     staffId: number,
