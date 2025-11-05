@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeepPartial } from 'typeorm';
-import { Course } from './entities/course.entity';
+import { DeepPartial, Repository } from 'typeorm';
+import { Department } from '../department/entities/department.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
-import { Department } from '../department/entities/department.entity';
+import { Course } from './entities/course.entity';
 
 @Injectable()
 export class CourseService {
@@ -25,11 +25,36 @@ export class CourseService {
     code?: string;
     teacherId?: number;
     level?: string;
+    classId?: number;
+    studentId?: number;
   }) {
     const qb = this.courseRepo.createQueryBuilder('c');
 
-    // IMPORTANT: because @JoinColumn({ name: 'department_id' }) is used,
-    // the physical DB column is "department_id", not "departmentId".
+    if (opts?.studentId) {
+      qb.andWhere(
+        `EXISTS (
+         SELECT 1
+         FROM student_class sc
+         JOIN class_course cc ON cc.class_id = sc.class_id
+         WHERE sc.student_id = :sid
+           AND cc.course_id = c.id
+       )`,
+        { sid: opts.studentId },
+      );
+    }
+
+    if (opts?.classId) {
+      qb.andWhere(
+        `EXISTS (
+         SELECT 1
+         FROM class_course cc
+         WHERE cc.class_id = :cid
+           AND cc.course_id = c.id
+       )`,
+        { cid: opts.classId },
+      );
+    }
+
     if (opts?.departmentId) {
       qb.andWhere('c.department_id = :d', { d: opts.departmentId });
     }
