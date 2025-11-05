@@ -1,6 +1,27 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { QuestionType } from '../../../common/enums/question-type.enum';
 import { QuestionOption } from '../../../common/types/question-option.enum';
+import { FeedbackAnswerDto } from './submit-feedback.dto';
+
+export class FeedbackSubmissionDto {
+  @ApiProperty({
+    description: 'Submitted answers',
+    type: [FeedbackAnswerDto],
+  })
+  answers!: FeedbackAnswerDto[];
+
+  @ApiProperty({
+    description: 'Student notes or suggestions',
+    example: 'Great teacher!',
+  })
+  notes!: string;
+
+  @ApiProperty({
+    description: 'Submission timestamp',
+    example: '2025-11-05T10:30:00Z',
+  })
+  submittedAt!: Date;
+}
 
 export class FeedbackFormDto {
   @ApiProperty({
@@ -56,6 +77,13 @@ export class FeedbackFormDto {
     example: false,
   })
   isSubmitted!: boolean;
+
+  @ApiProperty({
+    description: 'Submitted feedback data (only if isSubmitted is true)',
+    required: false,
+    type: () => FeedbackSubmissionDto,
+  })
+  submission?: FeedbackSubmissionDto;
 }
 
 export class FeedbackQuestionDto {
@@ -93,7 +121,7 @@ export class FeedbackQuestionDto {
 
   @ApiProperty({
     description: 'Available options for the question',
-    type: 'array',
+    isArray: true,
     example: [
       {
         value: 'ALWAYS_PUNCTUAL',

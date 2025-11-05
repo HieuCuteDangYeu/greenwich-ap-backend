@@ -142,35 +142,6 @@ export class FeedbackController {
     return this.feedbackService.submitFeedback(studentId, dto);
   }
 
-  @Get('submission')
-  @Roles(UserRole.STUDENT)
-  @ApiOperation({
-    summary: 'Get submitted feedback for a specific teacher/course',
-    description:
-      "Retrieve a student's submitted feedback for a specific teacher/course/term combination",
-  })
-  @ApiQuery({ name: 'staffId', required: true, type: Number })
-  @ApiQuery({ name: 'courseId', required: true, type: Number })
-  @ApiQuery({ name: 'termId', required: true, type: Number })
-  @CommonApiResponses()
-  getSubmittedFeedback(
-    @CurrentUser() user: AuthUser,
-    @Query('staffId', ParseIntPipe) staffId: number,
-    @Query('courseId', ParseIntPipe) courseId: number,
-    @Query('termId', ParseIntPipe) termId: number,
-  ) {
-    const studentId = user.student?.id;
-    if (!studentId) {
-      throw new BadRequestException('Student ID not found in user context');
-    }
-    return this.feedbackService.getSubmittedFeedback(
-      studentId,
-      staffId,
-      courseId,
-      termId,
-    );
-  }
-
   @Patch('submission')
   @Roles(UserRole.STUDENT)
   @ApiOperation({

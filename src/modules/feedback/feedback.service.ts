@@ -233,6 +233,10 @@ export class FeedbackService {
     // Collect all class courses from all classes
     const allClassCourses = classes.flatMap((c) => c.classCourses || []);
 
+    if (allClassCourses.length === 0) {
+      return { forms: [], questions: [] };
+    }
+
     // Get terms (filter by termId if provided)
     const termWhere = termId ? { id: termId } : {};
     const terms = await this.termRepository.find({ where: termWhere });
@@ -245,14 +249,27 @@ export class FeedbackService {
     const courseIds = Array.from(
       new Set(allClassCourses.map((cc) => cc.course.id)),
     );
+
+    if (courseIds.length === 0) {
+      return { forms: [], questions: [] };
+    }
+
     const courses = await this.courseRepository.find({
       where: { id: In(courseIds) },
     });
+
+    if (courses.length === 0) {
+      return { forms: [], questions: [] };
+    }
 
     // Get teacher information
     const teacherIds = courses
       .map((c) => c.teacherId)
       .filter((id): id is number => id !== null && id !== undefined);
+
+    if (teacherIds.length === 0) {
+      return { forms: [], questions: [] };
+    }
 
     const teachers = await this.staffRepository.find({
       where: { id: In(teacherIds) },
@@ -263,6 +280,10 @@ export class FeedbackService {
     const teacherMap = new Map(
       teachers.filter((t) => t.role?.role === 'TEACHER').map((t) => [t.id, t]),
     );
+
+    if (teacherMap.size === 0) {
+      return { forms: [], questions: [] };
+    }
 
     // Create a map of course to classes
     const courseToClassesMap = new Map<number, Class[]>();
@@ -276,7 +297,7 @@ export class FeedbackService {
       }
     }
 
-    // Get existing submissions
+    // Get existing submissions with responses in a single optimized query
     const submissions = await this.feedbackSubmissionRepository.find({
       where: {
         studentId: student.id,
@@ -284,11 +305,43 @@ export class FeedbackService {
       },
     });
 
-    const submissionSet = new Set(
-      submissions.map(
-        (s) => `${s.staffId}-${s.courseId}-${s.classId}-${s.termId}`,
-      ),
-    );
+    // Get all responses for the submissions
+    const responses =
+      submissions.length > 0
+        ? await this.feedbackResponseRepository.find({
+            where: submissions.map((s) => ({
+              studentId: s.studentId,
+              staffId: s.staffId,
+              courseId: s.courseId,
+              classId: s.classId,
+              termId: s.termId,
+            })),
+            relations: ['question'],
+          })
+        : [];
+
+    // Create a map for quick lookup: key -> submission with responses
+    const submissionMap = new Map<
+      string,
+      {
+        submission: FeedbackSubmission;
+        responses: FeedbackResponse[];
+      }
+    >();
+
+    for (const submission of submissions) {
+      const key = `${submission.staffId}-${submission.courseId}-${submission.classId}-${submission.termId}`;
+      submissionMap.set(key, { submission, responses: [] });
+    }
+
+    // Group responses by submission key
+    for (const response of responses) {
+      const key = `${response.staffId}-${response.courseId}-${response.classId}-${response.termId}`;
+      const entry = submissionMap.get(key);
+      if (entry) {
+        entry.responses.push(response);
+      }
+    }
 
     // Build feedback forms
     const forms: FeedbackFormDto[] = [];
@@ -303,8 +356,9 @@ export class FeedbackService {
           // Create a form for each class that has this course
           for (const classEntity of classesForCourse) {
             const key = `${teacher.id}-${course.id}-${classEntity.id}-${term.id}`;
+            const submissionData = submissionMap.get(key);
 
-            forms.push({
+            const form: FeedbackFormDto = {
               staffId: teacher.id,
               teacherName: `${teacher.user?.fullName || 'Unknown'}`,
               staffCode: teacher.staffCode,
@@ -313,8 +367,22 @@ export class FeedbackService {
               classCode: `${classEntity.name}`,
               classId: classEntity.id,
               termId: term.id,
-              isSubmitted: submissionSet.has(key),
-            });
+              isSubmitted: !!submissionData,
+            };
+
+            // Add submission data if it exists
+            if (submissionData) {
+              form.submission = {
+                answers: submissionData.responses.map((r) => ({
+                  questionId: r.questionId,
+                  selectedOption: r.selectedOption,
+                })),
+                notes: submissionData.submission.notes || '',
+                submittedAt: submissionData.submission.submittedAt,
+              };
+            }
+
+            forms.push(form);
           }
         }
       }
@@ -471,57 +539,6 @@ export class FeedbackService {
       // Release query runner
       await queryRunner.release();
     }
-  }
-
-  // Get submitted feedback
-  async getSubmittedFeedback(
-    studentId: number,
-    staffId: number,
-    courseId: number,
-    termId: number,
-  ) {
-    // Find the submission
-    const submission = await this.feedbackSubmissionRepository.findOne({
-      where: {
-        studentId,
-        staffId,
-        courseId,
-        termId,
-      },
-    });
-
-    if (!submission) {
-      throw new NotFoundException(
-        'No feedback submission found for this teacher/course combination',
-      );
-    }
-
-    // Get all responses for this submission
-    const responses = await this.feedbackResponseRepository.find({
-      where: {
-        studentId,
-        staffId,
-        courseId,
-        termId,
-      },
-      relations: ['question'],
-    });
-
-    // Transform responses into the SubmitFeedbackDto format
-    const answers = responses.map((response) => ({
-      questionId: Number(response.questionId),
-      selectedOption: response.selectedOption,
-    }));
-
-    return {
-      staffId: Number(submission.staffId),
-      courseId: Number(submission.courseId),
-      classId: Number(submission.classId),
-      termId: Number(submission.termId),
-      notes: submission.notes || '',
-      answers,
-      submittedAt: submission.submittedAt,
-    };
   }
 
   // Get feedback responses for a teacher/course (for staff to view)
