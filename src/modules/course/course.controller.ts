@@ -1,34 +1,34 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  Query,
+  Get,
+  Param,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
+  ApiDeleteOperation,
   ApiFindAllOperation,
   ApiFindOneOperation,
-  ApiUpdateOperation,
-  ApiDeleteOperation,
   ApiPaginationQuery,
+  ApiUpdateOperation,
 } from '../../common/decorators/swagger.decorator';
-import { ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { StaffRole, UserRole } from '../../common/enums/roles.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { CourseService } from './course.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { Course } from './entities/course.entity';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { StaffRole, UserRole } from '../../common/enums/roles.enum';
-import { StaffRoles } from '../../common/decorators/staff-roles.decorator';
 
 @ApiController('Courses', { requireAuth: true })
 @Controller('courses')
@@ -55,6 +55,8 @@ export class CourseController {
   @ApiQuery({ name: 'code', required: false, type: String })
   @ApiQuery({ name: 'teacherId', required: false, type: Number })
   @ApiQuery({ name: 'level', required: false, type: String })
+  @ApiQuery({ name: 'classId', required: false, type: Number })
+  @ApiQuery({ name: 'studentId', required: false, type: Number })
   findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
@@ -62,6 +64,8 @@ export class CourseController {
     @Query('code') code?: string,
     @Query('teacherId') teacherId?: number,
     @Query('level') level?: string,
+    @Query('classId') classId?: number,
+    @Query('studentId') studentId?: number,
   ) {
     return this.svc.findAll({
       page: Number(page) || 1,
@@ -70,6 +74,8 @@ export class CourseController {
       code,
       teacherId: teacherId ? Number(teacherId) : undefined,
       level,
+      classId: classId ? Number(classId) : undefined,
+      studentId: studentId ? Number(studentId) : undefined,
     });
   }
 
