@@ -73,11 +73,7 @@ class StudentDto {
 
   @ApiProperty()
   @Expose()
-  startYear: string;
-
-  @ApiProperty()
-  @Expose()
-  endYear: string;
+  currentYear: string;
 
   @ApiProperty()
   @Expose()
