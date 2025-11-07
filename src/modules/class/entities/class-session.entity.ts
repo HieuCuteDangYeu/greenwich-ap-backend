@@ -3,16 +3,14 @@ import {
   Column,
   Entity,
   JoinColumn,
-  JoinTable,
-  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   RelationId,
 } from 'typeorm';
-import { Class } from './class.entity';
 import { Course } from '../../course/entities/course.entity';
 import { Room } from '../../room/entities/room.entity';
 import { TimeSlot } from '../../time-slot/entities/time-slot.entity';
+import { Class } from './class.entity';
 
 export const CLASS_SESSION_STATUS = [
   'SCHEDULED',
@@ -80,11 +78,7 @@ export class ClassSession {
   })
   status!: ClassSessionStatus;
 
-  @ManyToMany(() => TimeSlot)
-  @JoinTable({
-    name: 'class_session_slot',
-    joinColumn: { name: 'session_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'slot_id', referencedColumnName: 'id' },
-  })
-  timeSlots?: TimeSlot[];
+  @ManyToOne(() => TimeSlot, (slot) => slot.sessions, { nullable: true })
+  @JoinColumn({ name: 'time_slot_id' })
+  timeSlot?: TimeSlot | null;
 }

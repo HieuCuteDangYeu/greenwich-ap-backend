@@ -1,21 +1,17 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
-  UseGuards,
-  ParseIntPipe,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  UseGuards,
 } from '@nestjs/common';
-import { TimeSlotService } from './time-slot.service';
-import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
-import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import {
   ApiController,
@@ -25,10 +21,14 @@ import {
   ApiFindOneOperation,
   ApiUpdateOperation,
 } from 'src/common/decorators/swagger.decorator';
-import { TimeSlot } from './entities/time-slot.entity';
-import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '../../common/enums/roles.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
+import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
+import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
+import { TimeSlot } from './entities/time-slot.entity';
+import { TimeSlotService } from './time-slot.service';
 
 @ApiController('Time Slots', { requireAuth: true })
 @Controller('time-slots')
@@ -82,10 +82,10 @@ export class TimeSlotController {
   }
 
   @Get('sessions/:sessionId')
-  @ApiOperation({ summary: 'Get all time slots for a class session' })
+  @ApiOperation({ summary: 'Get the assigned time slot for a class session' })
   @ApiResponse({
     status: 200,
-    description: 'Return all time slots for the session.',
+    description: 'Return the assigned time slot for the session.',
   })
   getSessionSlots(@Param('sessionId', ParseIntPipe) sessionId: number) {
     return this.timeSlotService.getSessionSlots(sessionId);

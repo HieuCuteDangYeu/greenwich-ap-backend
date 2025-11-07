@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
-import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { TimeSlot } from './entities/time-slot.entity';
 import { Repository } from 'typeorm';
 import { ClassSession } from '../class/entities/class-session.entity';
 import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
+import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
+import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
+import { TimeSlot } from './entities/time-slot.entity';
 
 @Injectable()
 export class TimeSlotService {
@@ -49,33 +49,21 @@ export class TimeSlotService {
   }
 
   async assignSlotToSession(assignTimeSlotDto: AssignTimeSlotDto) {
-    const { sessionId, slotId } = assignTimeSlotDto;
+    const { sessionId, timeSlotId } = assignTimeSlotDto;
 
     const session = await this.classSessionRepository.findOne({
       where: { id: sessionId },
-      relations: ['timeSlots'],
+      relations: ['timeSlot'],
     });
 
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
     }
 
-    const timeSlot = await this.findOne(slotId);
+    const timeSlot = await this.findOne(timeSlotId);
 
-    // Check if already assigned
-    if (!session.timeSlots) {
-      session.timeSlots = [];
-    }
-
-    const alreadyAssigned = session.timeSlots.some(
-      (slot) => slot.id === slotId,
-    );
-
-    if (alreadyAssigned) {
-      return { message: 'Time slot already assigned to this session', session };
-    }
-
-    session.timeSlots.push(timeSlot);
+    // Assign (overwrite) the slot
+    session.timeSlot = timeSlot;
     await this.classSessionRepository.save(session);
 
     return session;
@@ -84,32 +72,31 @@ export class TimeSlotService {
   async getSessionSlots(sessionId: number) {
     const session = await this.classSessionRepository.findOne({
       where: { id: sessionId },
-      relations: ['timeSlots'],
+      relations: ['timeSlot'],
     });
 
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
     }
 
-    return session.timeSlots || [];
+    return session.timeSlot || null;
   }
 
   async removeSlotFromSession(sessionId: number, slotId: number) {
     const session = await this.classSessionRepository.findOne({
       where: { id: sessionId },
-      relations: ['timeSlots'],
+      relations: ['timeSlot'],
     });
 
     if (!session) {
       throw new NotFoundException(`Session with ID ${sessionId} not found`);
     }
 
-    if (!session.timeSlots) {
-      session.timeSlots = [];
+    // Clear the slot only if it matches the provided ID
+    if (session.timeSlot && session.timeSlot.id === slotId) {
+      session.timeSlot = null;
+      await this.classSessionRepository.save(session);
     }
-
-    session.timeSlots = session.timeSlots.filter((slot) => slot.id !== slotId);
-    await this.classSessionRepository.save(session);
 
     return { message: 'Time slot removed from session' };
   }
