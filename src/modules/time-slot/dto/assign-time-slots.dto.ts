@@ -1,5 +1,5 @@
-import { SwaggerProperty } from 'src/common/decorators/swagger.decorator';
 import { IsInt, IsPositive } from 'class-validator';
+import { SwaggerProperty } from 'src/common/decorators/swagger.decorator';
 
 export class AssignTimeSlotDto {
   @SwaggerProperty({
@@ -16,5 +16,5 @@ export class AssignTimeSlotDto {
   })
   @IsInt()
   @IsPositive()
-  slotId: number;
+  timeSlotId: number;
 }

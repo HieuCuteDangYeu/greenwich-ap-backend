@@ -169,6 +169,7 @@ export class AttendanceService {
         'session.class',
         'session.course',
         'session.room',
+        'session.timeSlot',
       ],
     });
     if (!attendance) {
@@ -482,13 +483,15 @@ export class AttendanceService {
       return [];
     }
 
-    const studentIds = students.map((s) => Number(s.id));
+    const studentIdsList = students.map((s) => Number(s.id));
 
     // Get all attendances for these students
     const attendanceQuery = this.attendanceRepo
       .createQueryBuilder('attendance')
       .leftJoinAndSelect('attendance.session', 'session')
-      .where('attendance.student_id IN (:...studentIds)', { studentIds });
+      .where('attendance.student_id IN (:...studentIds)', {
+        studentIds: studentIdsList,
+      });
 
     if (courseId) {
       attendanceQuery.andWhere('session.course_id = :courseId', { courseId });
@@ -499,11 +502,11 @@ export class AttendanceService {
     // Group attendances by studentId
     const attendancesByStudent = new Map<number, typeof attendances>();
     attendances.forEach((att) => {
-      const studentId = Number(att.studentId);
-      if (!attendancesByStudent.has(studentId)) {
-        attendancesByStudent.set(studentId, []);
+      const sId = Number(att.studentId);
+      if (!attendancesByStudent.has(sId)) {
+        attendancesByStudent.set(sId, []);
       }
-      attendancesByStudent.get(studentId)!.push(att);
+      attendancesByStudent.get(sId)!.push(att);
     });
 
     // Calculate stats for each student
@@ -583,12 +586,12 @@ export class AttendanceService {
       .leftJoinAndSelect('session.class', 'class')
       .leftJoinAndSelect('session.course', 'course')
       .leftJoinAndSelect('session.room', 'room')
-      .leftJoinAndSelect('session.timeSlots', 'timeSlots')
+      .leftJoinAndSelect('session.timeSlot', 'timeSlot')
       .where('session.class_id IN (:...classIds)', { classIds })
       .andWhere('session.date_on >= :startDate', { startDate })
       .andWhere('session.date_on <= :endDate', { endDate })
       .orderBy('session.date_on', 'ASC')
-      .addOrderBy('timeSlots.start_time', 'ASC')
+      .addOrderBy('timeSlot.start_time', 'ASC')
       .getMany();
 
     // Early return if no sessions found
@@ -632,34 +635,28 @@ export class AttendanceService {
       // Get attendance status or mark as NOT_RECORDED
       const status = attendanceMap.get(session.id) || 'NOT_RECORDED';
 
-      // Handle multiple time slots for a session
-      if (session.timeSlots && session.timeSlots.length > 0) {
-        // Sort time slots by start time for consistent ordering
-        const sortedSlots = [...session.timeSlots].sort((a, b) =>
-          a.startTime.localeCompare(b.startTime),
-        );
-
-        for (const timeSlot of sortedSlots) {
-          schedule.push({
-            class: session.class.name,
-            course: session.course.code,
-            room: session.room.code,
-            teacher: session.teacherId,
-            status: status,
-            day: dayOfWeek,
-            slot: timeSlot.id,
-            date: session.dateOn,
-            sessionId: session.id,
-            classId: session.classId,
-            courseId: session.courseId,
-            roomId: session.roomId,
-            slotName: timeSlot.name,
-            slotStartTime: timeSlot.startTime,
-            slotEndTime: timeSlot.endTime,
-          });
-        }
+      // Handle a single time slot for a session
+      if (session.timeSlot) {
+        const timeSlot = session.timeSlot;
+        schedule.push({
+          class: session.class.name,
+          course: session.course.code,
+          room: session.room.code,
+          teacher: session.teacherId,
+          status: status,
+          day: dayOfWeek,
+          slot: timeSlot.id,
+          date: session.dateOn,
+          sessionId: session.id,
+          classId: session.classId,
+          courseId: session.courseId,
+          roomId: session.roomId,
+          slotName: timeSlot.name,
+          slotStartTime: timeSlot.startTime,
+          slotEndTime: timeSlot.endTime,
+        });
       } else {
-        // If no time slots, still create an entry
+        // If no time slot, still create an entry
         schedule.push({
           class: session.class.name,
           course: session.course.code,
