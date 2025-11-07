@@ -8,7 +8,7 @@ import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { AttendanceService } from '../attendance/attendance.service';
 import { Course } from '../course/entities/course.entity';
 import { Room } from '../room/entities/room.entity';
-import { Student } from '../student/entities/student.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { AddCourseDto } from './dto/add-course.dto';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -29,10 +29,10 @@ export class ClassService {
     private readonly classSessionRepository: Repository<ClassSession>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-    @InjectRepository(Student)
-    private readonly studentRepository: Repository<Student>,
     @InjectRepository(Room)
     private readonly roomRepository: Repository<Room>,
+    @InjectRepository(Staff)
+    private readonly staffRepository: Repository<Staff>,
     private readonly attendanceService: AttendanceService,
   ) {}
 
@@ -73,6 +73,16 @@ export class ClassService {
     if (!room) {
       throw new NotFoundException(
         `Room with ID ${createSessionDto.roomId} not found`,
+      );
+    }
+
+    const teacher = await this.staffRepository.findOne({
+      where: { id: createSessionDto.teacherId },
+    });
+
+    if (!teacher) {
+      throw new NotFoundException(
+        `Teacher with ID ${createSessionDto.teacherId} not found`,
       );
     }
 
