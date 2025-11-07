@@ -10,6 +10,19 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { Course } from './entities/course.entity';
 
+interface FindAllOptions {
+  page?: number;
+  limit?: number;
+  departmentId?: number;
+  code?: string;
+  teacherId?: number;
+  level?: string;
+  classId?: number;
+  studentId?: number;
+  sort?: string;
+  order?: 'ASC' | 'DESC';
+}
+
 @Injectable()
 export class CourseService {
   constructor(
@@ -18,60 +31,67 @@ export class CourseService {
     private readonly deptRepo: Repository<Department>,
   ) {}
 
-  async findAll(opts?: {
-    page?: number;
-    limit?: number;
-    departmentId?: number;
-    code?: string;
-    teacherId?: number;
-    level?: string;
-    classId?: number;
-    studentId?: number;
-  }) {
+  async findAll(opts: FindAllOptions = {}) {
     const qb = this.courseRepo.createQueryBuilder('c');
 
-    if (opts?.studentId) {
+    if (opts.studentId) {
       qb.andWhere(
         `EXISTS (
-         SELECT 1
-         FROM student_class sc
-         JOIN class_course cc ON cc.class_id = sc.class_id
-         WHERE sc.student_id = :sid
-           AND cc.course_id = c.id
-       )`,
+        SELECT 1
+        FROM student_class sc
+        JOIN class_course cc ON cc.class_id = sc.class_id
+        WHERE sc.student_id = :sid
+          AND cc.course_id = c.id
+      )`,
         { sid: opts.studentId },
       );
     }
 
-    if (opts?.classId) {
+    if (opts.classId) {
       qb.andWhere(
         `EXISTS (
-         SELECT 1
-         FROM class_course cc
-         WHERE cc.class_id = :cid
-           AND cc.course_id = c.id
-       )`,
+        SELECT 1
+        FROM class_course cc
+        WHERE cc.class_id = :cid
+          AND cc.course_id = c.id
+      )`,
         { cid: opts.classId },
       );
     }
 
-    if (opts?.departmentId) {
+    if (opts.departmentId) {
       qb.andWhere('c.department_id = :d', { d: opts.departmentId });
     }
-    if (opts?.code) {
+
+    if (opts.code) {
       qb.andWhere('c.code ILIKE :q', { q: `%${opts.code}%` });
     }
-    if (opts?.teacherId) {
+
+    if (opts.teacherId) {
       qb.andWhere('c.teacher_id = :t', { t: opts.teacherId });
     }
-    if (opts?.level) {
+
+    if (opts.level) {
       qb.andWhere('c.level = :l', { l: opts.level });
     }
 
-    qb.orderBy('c.created_at', 'DESC');
+    // Sorting
+    const sortFieldMap: Record<string, string> = {
+      code: 'c.code',
+      title: 'c.title',
+      level: 'c.level',
+      createdAt: 'c.created_at',
+      id: 'c.id',
+    };
+    const sortField = opts.sort || 'id';
+    const mappedSortField = sortFieldMap[sortField] || 'c.id';
+    const sortOrder = opts.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    const page = opts?.page && opts.page > 0 ? opts.page : 1;
-    const limit = opts?.limit && opts.limit > 0 ? opts.limit : 25;
+    qb.orderBy(mappedSortField, sortOrder).addOrderBy('c.id', sortOrder);
+
+    // Pagination
+    const page = opts.page && opts.page > 0 ? opts.page : 1;
+    const limit = opts.limit && opts.limit > 0 ? opts.limit : 25;
     qb.skip((page - 1) * limit).take(limit);
 
     return qb.getMany();

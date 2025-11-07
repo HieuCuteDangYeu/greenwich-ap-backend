@@ -66,16 +66,20 @@ export class CourseController {
     @Query('level') level?: string,
     @Query('classId') classId?: number,
     @Query('studentId') studentId?: number,
+    @Query('sort') sort?: string,
+    @Query('order') order?: 'ASC' | 'DESC',
   ) {
     return this.svc.findAll({
-      page: Number(page) || 1,
-      limit: Number(limit) || 25,
-      departmentId: departmentId ? Number(departmentId) : undefined,
+      page,
+      limit,
+      departmentId,
       code,
-      teacherId: teacherId ? Number(teacherId) : undefined,
+      teacherId,
       level,
-      classId: classId ? Number(classId) : undefined,
-      studentId: studentId ? Number(studentId) : undefined,
+      classId,
+      studentId,
+      sort,
+      order,
     });
   }
 

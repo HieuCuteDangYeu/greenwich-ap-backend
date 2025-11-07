@@ -19,6 +19,7 @@ import {
   ApiDeleteOperation,
   ApiFindAllOperation,
   ApiFindOneOperation,
+  ApiPaginationQuery,
   ApiUpdateOperation,
 } from '../../common/decorators/swagger.decorator';
 import { StaffRole, UserRole } from '../../common/enums/roles.enum';
@@ -75,6 +76,7 @@ export class AttendanceController {
   @Roles(UserRole.ADMIN, UserRole.STAFF, UserRole.STUDENT)
   @StaffRoles(StaffRole.TEACHER)
   @ApiFindAllOperation(Attendance, 'List all attendance records')
+  @ApiPaginationQuery()
   @ApiQuery({
     name: 'studentId',
     description: 'Filter by student ID',
@@ -111,6 +113,10 @@ export class AttendanceController {
     @Query('status') status?: string,
     @Query('classId') classId?: number,
     @Query('courseId') courseId?: number,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('sort') sort?: string,
+    @Query('order') order?: 'ASC' | 'DESC',
   ) {
     return this.attendanceService.findAll({
       studentId,
@@ -118,6 +124,10 @@ export class AttendanceController {
       status,
       classId,
       courseId,
+      page,
+      limit,
+      sort,
+      order,
     });
   }
 

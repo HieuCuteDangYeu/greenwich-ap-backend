@@ -17,6 +17,18 @@ import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
 import { Attendance } from './entities/attendance.entity';
 
+interface FindAllOptions {
+  studentId?: number;
+  sessionId?: number;
+  status?: string;
+  classId?: number;
+  courseId?: number;
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'ASC' | 'DESC';
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -71,45 +83,90 @@ export class AttendanceService {
   }
 
   // READ all with filters
-  async findAll(filter?: {
-    studentId?: number;
-    sessionId?: number;
-    status?: string;
-    classId?: number;
-    courseId?: number;
-  }): Promise<Attendance[]> {
-    const qb = this.attendanceRepo
-      .createQueryBuilder('a')
-      .leftJoinAndSelect('a.student', 'student')
-      .leftJoinAndSelect('a.session', 'session')
-      .leftJoinAndSelect('session.class', 'class')
-      .leftJoinAndSelect('session.course', 'course')
-      .leftJoinAndSelect('session.room', 'room')
-      .orderBy('a.createdAt', 'DESC');
+  async findAll(filter: FindAllOptions = {}): Promise<Attendance[]> {
+    if (filter?.classId || filter?.courseId) {
+      const qb = this.attendanceRepo
+        .createQueryBuilder('a')
+        .leftJoinAndSelect('a.student', 'student')
+        .leftJoinAndSelect('student.user', 'user')
+        .leftJoinAndSelect('a.session', 'session')
+        .leftJoinAndSelect('session.class', 'class')
+        .leftJoinAndSelect('session.course', 'course')
+        .leftJoinAndSelect('session.room', 'room');
+
+      if (filter.studentId) {
+        qb.andWhere('a.student_id = :studentId', {
+          studentId: filter.studentId,
+        });
+      }
+
+      if (filter.sessionId) {
+        qb.andWhere('a.session_id = :sessionId', {
+          sessionId: filter.sessionId,
+        });
+      }
+
+      if (filter.status) {
+        qb.andWhere('a.status = :status', { status: filter.status });
+      }
+
+      if (filter.classId) {
+        qb.andWhere('session.class_id = :classId', { classId: filter.classId });
+      }
+
+      if (filter.courseId) {
+        qb.andWhere('session.course_id = :courseId', {
+          courseId: filter.courseId,
+        });
+      }
+
+      // Simple ordering without joined fields
+      const sortOrder: 'ASC' | 'DESC' =
+        filter.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+      qb.orderBy('a.id', sortOrder);
+
+      // Pagination
+      const page = filter.page && filter.page > 0 ? filter.page : 1;
+      const limit = filter.limit && filter.limit > 0 ? filter.limit : 25;
+      qb.skip((page - 1) * limit).take(limit);
+
+      return qb.getMany();
+    }
+
+    // For simple queries without classId/courseId, use find
+    const whereConditions: Record<string, any> = {};
 
     if (filter?.studentId) {
-      qb.andWhere('a.student_id = :studentId', { studentId: filter.studentId });
+      whereConditions.studentId = filter.studentId;
     }
 
     if (filter?.sessionId) {
-      qb.andWhere('a.session_id = :sessionId', { sessionId: filter.sessionId });
+      whereConditions.sessionId = filter.sessionId;
     }
 
     if (filter?.status) {
-      qb.andWhere('a.status = :status', { status: filter.status });
+      whereConditions.status = filter.status;
     }
 
-    if (filter?.classId) {
-      qb.andWhere('session.class_id = :classId', { classId: filter.classId });
-    }
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const limit = filter.limit && filter.limit > 0 ? filter.limit : 25;
+    const sortOrder: 'ASC' | 'DESC' =
+      filter.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    if (filter?.courseId) {
-      qb.andWhere('session.course_id = :courseId', {
-        courseId: filter.courseId,
-      });
-    }
-
-    return qb.getMany();
+    return this.attendanceRepo.find({
+      where: whereConditions,
+      relations: [
+        'student',
+        'student.user',
+        'session',
+        'session.class',
+        'session.course',
+        'session.room',
+      ],
+      order: { id: sortOrder },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
   }
 
   // READ one
