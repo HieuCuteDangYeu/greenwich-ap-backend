@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { CourseModule } from '../course/course.module';
 import { Room } from '../room/entities/room.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { StudentModule } from '../student/student.module';
 import { ClassController } from './class.controller';
 import { ClassService } from './class.service';
@@ -12,7 +13,7 @@ import { Class } from './entities/class.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Class, ClassCourse, ClassSession, Room]),
+    TypeOrmModule.forFeature([Class, ClassCourse, ClassSession, Room, Staff]),
     CourseModule,
     StudentModule,
     AttendanceModule,

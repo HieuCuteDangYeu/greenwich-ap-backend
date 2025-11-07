@@ -5,10 +5,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { ClassSession } from '../../class/entities/class-session.entity';
 import { User } from '../../user/entities/user.entity';
 import { StaffRole } from './staff_role.entity';
 
@@ -71,6 +73,9 @@ export class Staff {
     nullable: true,
   })
   notes?: string;
+
+  @OneToMany(() => ClassSession, (session) => session.teacher)
+  classSessions!: ClassSession[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

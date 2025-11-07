@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Course } from '../../course/entities/course.entity';
 import { Room } from '../../room/entities/room.entity';
+import { Staff } from '../../staff/entities/staff.entity';
 import { TimeSlot } from '../../time-slot/entities/time-slot.entity';
 import { Class } from './class.entity';
 
@@ -31,7 +32,6 @@ export class ClassSession {
   @JoinColumn({ name: 'class_id' })
   class!: Class;
 
-  @ApiProperty({ description: 'Reference to the class' })
   @RelationId((session: ClassSession) => session.class)
   classId!: number;
 
@@ -41,30 +41,28 @@ export class ClassSession {
   @JoinColumn({ name: 'course_id' })
   course!: Course;
 
-  @ApiProperty({ description: 'Reference to the course' })
   @RelationId((session: ClassSession) => session.course)
   courseId!: number;
 
-  @ApiProperty({
-    type: String,
-    format: 'date',
-    example: '2024-06-01',
-  })
+  @ApiProperty({ type: String, format: 'date', example: '2024-06-01' })
   @Column({ name: 'date_on', type: 'date' })
   dateOn!: string;
-
-  @ApiProperty({
-    description: 'Reference to the room where the session occurs',
-  })
-  @Column({ name: 'room_id', type: 'bigint' })
-  roomId!: number;
 
   @ManyToOne(() => Room, (room) => room.sessions, { nullable: false })
   @JoinColumn({ name: 'room_id' })
   room!: Room;
 
-  @ApiProperty({ description: 'Reference to the teacher in charge' })
-  @Column({ name: 'teacher_id', type: 'bigint' })
+  @RelationId((session: ClassSession) => session.room)
+  roomId!: number;
+
+  @ManyToOne(() => Staff, (staff) => staff.classSessions, {
+    eager: true,
+    nullable: false,
+  })
+  @JoinColumn({ name: 'teacher_id' })
+  teacher!: Staff;
+
+  @RelationId((session: ClassSession) => session.teacher)
   teacherId!: number;
 
   @ApiProperty({

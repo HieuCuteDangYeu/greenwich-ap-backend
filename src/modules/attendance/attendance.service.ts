@@ -17,6 +17,18 @@ import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { UpdateBulkAttendanceDto } from './dto/update-bulk-attendance.dto';
 import { Attendance } from './entities/attendance.entity';
 
+interface FindAllOptions {
+  studentId?: number;
+  sessionId?: number;
+  status?: string;
+  classId?: number;
+  courseId?: number;
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'ASC' | 'DESC';
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -71,45 +83,80 @@ export class AttendanceService {
   }
 
   // READ all with filters
-  async findAll(filter?: {
-    studentId?: number;
-    sessionId?: number;
-    status?: string;
-    classId?: number;
-    courseId?: number;
-  }): Promise<Attendance[]> {
-    const qb = this.attendanceRepo
-      .createQueryBuilder('a')
-      .leftJoinAndSelect('a.student', 'student')
-      .leftJoinAndSelect('a.session', 'session')
-      .leftJoinAndSelect('session.class', 'class')
-      .leftJoinAndSelect('session.course', 'course')
-      .leftJoinAndSelect('session.room', 'room')
-      .orderBy('a.createdAt', 'DESC');
+  async findAll(filter: FindAllOptions = {}): Promise<Attendance[]> {
+    const page = filter.page && filter.page > 0 ? filter.page : 1;
+    const limit = filter.limit && filter.limit > 0 ? filter.limit : 25;
+    const skip = (page - 1) * limit;
 
-    if (filter?.studentId) {
-      qb.andWhere('a.student_id = :studentId', { studentId: filter.studentId });
+    const where: {
+      student?: { id: number };
+      session?: {
+        id?: number;
+        class?: { id: number };
+        course?: { id: number };
+      };
+      status?: 'PRESENT' | 'ABSENT' | 'PENDING';
+    } = {};
+
+    if (filter.studentId) {
+      where.student = { id: filter.studentId };
     }
 
-    if (filter?.sessionId) {
-      qb.andWhere('a.session_id = :sessionId', { sessionId: filter.sessionId });
+    if (filter.sessionId) {
+      where.session = { id: filter.sessionId };
     }
 
-    if (filter?.status) {
-      qb.andWhere('a.status = :status', { status: filter.status });
+    if (filter.status) {
+      where.status = filter.status as 'PRESENT' | 'ABSENT' | 'PENDING';
     }
 
-    if (filter?.classId) {
-      qb.andWhere('session.class_id = :classId', { classId: filter.classId });
+    if (filter.classId) {
+      where.session = {
+        ...(where.session || {}),
+        class: { id: filter.classId },
+      };
     }
 
-    if (filter?.courseId) {
-      qb.andWhere('session.course_id = :courseId', {
-        courseId: filter.courseId,
-      });
+    if (filter.courseId) {
+      where.session = {
+        ...(where.session || {}),
+        course: { id: filter.courseId },
+      };
     }
 
-    return qb.getMany();
+    type OrderType =
+      | { id: 'ASC' | 'DESC' }
+      | { createdAt: 'ASC' | 'DESC' }
+      | { session: { dateOn: 'ASC' | 'DESC' } };
+
+    const orderValue = filter.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    const sortFieldMap: Record<string, OrderType> = {
+      id: { id: orderValue },
+      createdAt: { createdAt: orderValue },
+      dateOn: { session: { dateOn: orderValue } },
+    };
+
+    const order: OrderType = sortFieldMap[filter.sort || 'id'] || {
+      id: orderValue,
+    };
+
+    const records = await this.attendanceRepo.find({
+      where,
+      relations: [
+        'student',
+        'student.user',
+        'session',
+        'session.class',
+        'session.course',
+        'session.room',
+      ],
+      order,
+      skip,
+      take: limit,
+    });
+
+    return records;
   }
 
   // READ one

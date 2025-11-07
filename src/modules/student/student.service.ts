@@ -113,6 +113,10 @@ export class StudentService {
   ): Promise<{ success: boolean }> {
     const student = await this.findOne(id);
 
+    if (dto.user) {
+      await this.userService.update(student.user.id, dto.user);
+    }
+
     // Update mentor
     if (dto.mentorId) {
       const mentor = await this.staffService.findOne(dto.mentorId);
