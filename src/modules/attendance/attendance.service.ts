@@ -84,77 +84,65 @@ export class AttendanceService {
 
   // READ all with filters
   async findAll(filter: FindAllOptions = {}): Promise<Attendance[]> {
-    if (filter?.classId || filter?.courseId) {
-      const qb = this.attendanceRepo
-        .createQueryBuilder('a')
-        .leftJoinAndSelect('a.student', 'student')
-        .leftJoinAndSelect('student.user', 'user')
-        .leftJoinAndSelect('a.session', 'session')
-        .leftJoinAndSelect('session.class', 'class')
-        .leftJoinAndSelect('session.course', 'course')
-        .leftJoinAndSelect('session.room', 'room');
-
-      if (filter.studentId) {
-        qb.andWhere('a.student_id = :studentId', {
-          studentId: filter.studentId,
-        });
-      }
-
-      if (filter.sessionId) {
-        qb.andWhere('a.session_id = :sessionId', {
-          sessionId: filter.sessionId,
-        });
-      }
-
-      if (filter.status) {
-        qb.andWhere('a.status = :status', { status: filter.status });
-      }
-
-      if (filter.classId) {
-        qb.andWhere('session.class_id = :classId', { classId: filter.classId });
-      }
-
-      if (filter.courseId) {
-        qb.andWhere('session.course_id = :courseId', {
-          courseId: filter.courseId,
-        });
-      }
-
-      // Simple ordering without joined fields
-      const sortOrder: 'ASC' | 'DESC' =
-        filter.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-      qb.orderBy('a.id', sortOrder);
-
-      // Pagination
-      const page = filter.page && filter.page > 0 ? filter.page : 1;
-      const limit = filter.limit && filter.limit > 0 ? filter.limit : 25;
-      qb.skip((page - 1) * limit).take(limit);
-
-      return qb.getMany();
-    }
-
-    // For simple queries without classId/courseId, use find
-    const whereConditions: Record<string, any> = {};
-
-    if (filter?.studentId) {
-      whereConditions.studentId = filter.studentId;
-    }
-
-    if (filter?.sessionId) {
-      whereConditions.sessionId = filter.sessionId;
-    }
-
-    if (filter?.status) {
-      whereConditions.status = filter.status;
-    }
-
     const page = filter.page && filter.page > 0 ? filter.page : 1;
     const limit = filter.limit && filter.limit > 0 ? filter.limit : 25;
-    const sortOrder: 'ASC' | 'DESC' =
-      filter.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const skip = (page - 1) * limit;
 
-    return this.attendanceRepo.find({
-      where: whereConditions,
+    const where: {
+      student?: { id: number };
+      session?: {
+        id?: number;
+        class?: { id: number };
+        course?: { id: number };
+      };
+      status?: 'PRESENT' | 'ABSENT' | 'PENDING';
+    } = {};
+
+    if (filter.studentId) {
+      where.student = { id: filter.studentId };
+    }
+
+    if (filter.sessionId) {
+      where.session = { id: filter.sessionId };
+    }
+
+    if (filter.status) {
+      where.status = filter.status as 'PRESENT' | 'ABSENT' | 'PENDING';
+    }
+
+    if (filter.classId) {
+      where.session = {
+        ...(where.session || {}),
+        class: { id: filter.classId },
+      };
+    }
+
+    if (filter.courseId) {
+      where.session = {
+        ...(where.session || {}),
+        course: { id: filter.courseId },
+      };
+    }
+
+    type OrderType =
+      | { id: 'ASC' | 'DESC' }
+      | { createdAt: 'ASC' | 'DESC' }
+      | { session: { dateOn: 'ASC' | 'DESC' } };
+
+    const orderValue = filter.order?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    const sortFieldMap: Record<string, OrderType> = {
+      id: { id: orderValue },
+      createdAt: { createdAt: orderValue },
+      dateOn: { session: { dateOn: orderValue } },
+    };
+
+    const order: OrderType = sortFieldMap[filter.sort || 'id'] || {
+      id: orderValue,
+    };
+
+    const records = await this.attendanceRepo.find({
+      where,
       relations: [
         'student',
         'student.user',
@@ -163,10 +151,12 @@ export class AttendanceService {
         'session.course',
         'session.room',
       ],
-      order: { id: sortOrder },
-      skip: (page - 1) * limit,
+      order,
+      skip,
       take: limit,
     });
+
+    return records;
   }
 
   // READ one
