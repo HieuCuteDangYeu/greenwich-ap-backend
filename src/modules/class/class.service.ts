@@ -122,10 +122,16 @@ export class ClassService {
 
   findSessions(
     classId: number,
-    { from, to }: { from?: string; to?: string } = {},
+    {
+      from,
+      to,
+      courseId,
+    }: { from?: string; to?: string; courseId?: number } = {},
   ) {
     const where: Record<string, any> = { class: { id: classId } };
-
+    if (courseId !== undefined) {
+      where.course = { id: courseId };
+    }
     if (from && to) {
       if (new Date(from) > new Date(to)) {
         throw new BadRequestException(
