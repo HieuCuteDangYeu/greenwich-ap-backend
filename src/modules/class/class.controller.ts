@@ -1,18 +1,17 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
   Query,
   UseGuards,
-  ParseIntPipe,
 } from '@nestjs/common';
-import { ClassService } from './class.service';
-import { CreateClassDto } from './dto/create-class.dto';
-import { UpdateClassDto } from './dto/update-class.dto';
+import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Roles } from '../../common/decorators/roles.decorator';
 import {
   ApiController,
   ApiCreateOperation,
@@ -21,15 +20,16 @@ import {
   ApiFindOneOperation,
   ApiUpdateOperation,
 } from '../../common/decorators/swagger.decorator';
-import { Class } from './entities/class.entity';
-import { AddCourseDto } from './dto/add-course.dto';
-import { ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { ClassService } from './class.service';
+import { AddCourseDto } from './dto/add-course.dto';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
+import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassSessionDto } from './dto/update-class-session.dto';
-import { UserRole } from '../../common/enums/roles.enum';
+import { UpdateClassDto } from './dto/update-class.dto';
+import { Class } from './entities/class.entity';
 
 @ApiController('Classes', { requireAuth: true })
 @Controller('classes')
@@ -133,13 +133,20 @@ export class ClassController {
     description: 'End date (inclusive) in YYYY-MM-DD format',
     type: String,
   })
+  @ApiQuery({
+    name: 'courseId',
+    required: false,
+    description: 'Filter sessions by course ID',
+    type: Number,
+  })
   @Get(':id/sessions')
   findSessions(
     @Param('id') id: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('courseId', new ParseIntPipe({ optional: true })) courseId?: number,
   ) {
-    return this.classService.findSessions(+id, { from, to });
+    return this.classService.findSessions(+id, { from, to, courseId });
   }
 
   @ApiOperation({ summary: 'Get a specific class session' })
