@@ -50,6 +50,7 @@ export class Course {
   @Column({ type: 'varchar', length: 20 })
   level!: string;
 
+  @ApiProperty({ type: () => Staff, required: false })
   @ManyToOne(() => Staff, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'teacher_id' })
   teacher?: Staff | null;
