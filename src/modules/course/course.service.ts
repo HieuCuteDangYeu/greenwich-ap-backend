@@ -114,7 +114,7 @@ export class CourseService {
     if (!department) throw new NotFoundException('Department not found');
 
     let teacher: Staff | null = null;
-    if (dto.teacherId !== undefined) {
+    if (dto.teacherId !== undefined && dto.teacherId !== null) {
       teacher = await this.staffRepo.findOne({ where: { id: dto.teacherId } });
       if (!teacher) throw new NotFoundException('Teacher not found');
     }
