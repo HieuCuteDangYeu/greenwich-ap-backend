@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
 import { Department } from '../department/entities/department.entity';
+import { Staff } from '../staff/entities/staff.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { Course } from './entities/course.entity';
@@ -29,6 +30,8 @@ export class CourseService {
     @InjectRepository(Course) private readonly courseRepo: Repository<Course>,
     @InjectRepository(Department)
     private readonly deptRepo: Repository<Department>,
+    @InjectRepository(Staff)
+    private readonly staffRepo: Repository<Staff>,
   ) {}
 
   async findAll(opts: FindAllOptions = {}) {
@@ -110,13 +113,19 @@ export class CourseService {
     });
     if (!department) throw new NotFoundException('Department not found');
 
+    let teacher: Staff | null = null;
+    if (dto.teacherId !== undefined) {
+      teacher = await this.staffRepo.findOne({ where: { id: dto.teacherId } });
+      if (!teacher) throw new NotFoundException('Teacher not found');
+    }
+
     // 2) create a SINGLE entity object (no array [])
     const ent = this.courseRepo.create({
       code: dto.code,
       title: dto.title,
       credits: dto.credits ?? null,
       level: dto.level,
-      teacherId: dto.teacherId ?? null,
+      teacher: teacher ?? null,
       slot: dto.slot ?? null,
       // status left to default ('ACTIVE') from your entity
       department, // <-- sets department_id under the hood
@@ -153,7 +162,13 @@ export class CourseService {
     if (dto.title !== undefined) ent.title = dto.title;
     if (dto.credits !== undefined) ent.credits = dto.credits;
     if (dto.level !== undefined) ent.level = dto.level;
-    if (dto.teacherId !== undefined) ent.teacherId = dto.teacherId;
+    if (dto.teacherId !== undefined) {
+      const teacher = await this.staffRepo.findOne({
+        where: { id: dto.teacherId },
+      });
+      if (!teacher) throw new NotFoundException('Teacher not found');
+      ent.teacher = teacher;
+    }
     if (dto.slot !== undefined) ent.slot = dto.slot;
     if (dto.status !== undefined) ent.status = dto.status;
 
