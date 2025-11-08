@@ -1,18 +1,19 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  RelationId,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-} from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
-import { Department } from '../../department/entities/department.entity';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  RelationId,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ClassCourse } from '../../class/entities/class-course.entity';
 import { ClassSession } from '../../class/entities/class-session.entity';
+import { Department } from '../../department/entities/department.entity';
+import { Staff } from '../../staff/entities/staff.entity';
 @Entity({ name: 'course' })
 export class Course {
   @ApiProperty()
@@ -49,9 +50,13 @@ export class Course {
   @Column({ type: 'varchar', length: 20 })
   level!: string;
 
-  @ApiProperty({ required: false })
-  @Column({ name: 'teacher_id', type: 'bigint', nullable: true })
-  teacherId?: number;
+  @ApiProperty({ type: () => Staff, required: false })
+  @ManyToOne(() => Staff, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'teacher_id' })
+  teacher?: Staff | null;
+
+  @RelationId((course: Course) => course.teacher)
+  teacherId?: number | null;
 
   @ApiProperty({ required: false })
   @Column({ type: 'integer', nullable: true })

@@ -94,7 +94,8 @@ export class ClassService {
       dateOn: createSessionDto.dateOn,
       room,
       roomId: room.id,
-      teacherId: createSessionDto.teacherId,
+      teacher,
+      teacherId: teacher.id,
       status: createSessionDto.status ?? 'SCHEDULED',
     });
 
@@ -206,7 +207,17 @@ export class ClassService {
       session.roomId = room.id;
     }
     if (updateDto.teacherId !== undefined) {
-      session.teacherId = updateDto.teacherId;
+      const teacher = await this.staffRepository.findOne({
+        where: { id: updateDto.teacherId },
+      });
+      if (!teacher) {
+        throw new NotFoundException(
+          `Teacher with ID ${updateDto.teacherId} not found`,
+        );
+      }
+
+      session.teacher = teacher;
+      session.teacherId = teacher.id;
     }
     if (updateDto.status !== undefined) {
       session.status = updateDto.status;
