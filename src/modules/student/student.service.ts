@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Class } from '../class/entities/class.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { StaffService } from '../staff/staff.service';
@@ -351,8 +351,10 @@ export class StudentService {
     students: Student[],
     {
       setStartTermIfMissing,
+      entityManager,
     }: {
       setStartTermIfMissing: boolean;
+      entityManager?: EntityManager;
     },
   ): Promise<Student[]> {
     if (students.length === 0) {
@@ -389,6 +391,7 @@ export class StudentService {
       }
     });
 
-    return this.studentRepo.save(students);
+    const manager = entityManager || this.studentRepo.manager;
+    return manager.save(Student, students);
   }
 }

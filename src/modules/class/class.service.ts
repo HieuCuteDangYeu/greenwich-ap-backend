@@ -349,6 +349,7 @@ export class ClassService {
         classEntity.students || [],
         {
           setStartTermIfMissing: true,
+          entityManager: queryRunner.manager,
         },
       );
 
