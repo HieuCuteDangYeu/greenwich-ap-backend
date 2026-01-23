@@ -4,7 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
+import {
+  Between,
+  DataSource,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Repository,
+} from 'typeorm';
 import { AttendanceService } from '../attendance/attendance.service';
 import { Course } from '../course/entities/course.entity';
 import { Room } from '../room/entities/room.entity';
@@ -36,6 +42,7 @@ export class ClassService {
     private readonly staffRepository: Repository<Staff>,
     private readonly attendanceService: AttendanceService,
     private readonly studentService: StudentService,
+    private readonly dataSource: DataSource,
   ) {}
 
   create(createClassDto: CreateClassDto) {
@@ -322,17 +329,41 @@ export class ClassService {
       );
     }
 
-    const newClassCourse = this.classCourseRepository.create({
-      class: classEntity,
-      course: course,
-      note: addCourseDto.note,
-    });
+    // Use transaction to ensure atomicity
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    const saved = await this.classCourseRepository.save(newClassCourse);
-    await this.studentService.updateAcademicFields(classEntity.students || [], {
-      setStartTermIfMissing: true,
-    });
-    return saved;
+    try {
+      // Save class-course relation within transaction
+      const newClassCourse = queryRunner.manager.create(ClassCourse, {
+        class: classEntity,
+        course: course,
+        note: addCourseDto.note,
+      });
+
+      const saved = await queryRunner.manager.save(ClassCourse, newClassCourse);
+
+      // Update student academic fields within transaction
+      await this.studentService.updateAcademicFields(
+        classEntity.students || [],
+        {
+          setStartTermIfMissing: true,
+        },
+      );
+
+      // Commit transaction
+      await queryRunner.commitTransaction();
+
+      return saved;
+    } catch (error) {
+      // Rollback transaction on error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Release query runner
+      await queryRunner.release();
+    }
   }
 
   async removeCourse(id: number, courseId: number) {
