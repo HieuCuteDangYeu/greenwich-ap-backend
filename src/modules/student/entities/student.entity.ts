@@ -51,6 +51,17 @@ export class Student {
   @Column({ name: 'enrolment_day', type: 'date', nullable: false })
   enrolmentDay!: Date;
 
+  @ApiProperty({
+    description: 'Program duration in years',
+    example: 4,
+  })
+  @Column({
+    name: 'program_duration_years',
+    type: 'int',
+    default: 4,
+  })
+  programDurationYears!: number;
+
   @ApiProperty({ description: 'Mentor (Staff reference)', required: false })
   @Column({ name: 'mentor_id', type: 'bigint', nullable: true })
   mentorId?: number | null;

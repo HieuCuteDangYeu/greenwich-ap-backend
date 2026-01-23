@@ -4,9 +4,7 @@ import { AttendanceModule } from '../attendance/attendance.module';
 import { CourseModule } from '../course/course.module';
 import { Room } from '../room/entities/room.entity';
 import { Staff } from '../staff/entities/staff.entity';
-import { Student } from '../student/entities/student.entity';
 import { StudentModule } from '../student/student.module';
-import { Term } from '../term/entities/term.entity';
 import { ClassController } from './class.controller';
 import { ClassService } from './class.service';
 import { ClassCourse } from './entities/class-course.entity';
@@ -15,15 +13,7 @@ import { Class } from './entities/class.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Class,
-      ClassCourse,
-      ClassSession,
-      Room,
-      Staff,
-      Student,
-      Term,
-    ]),
+    TypeOrmModule.forFeature([Class, ClassCourse, ClassSession, Room, Staff]),
     CourseModule,
     StudentModule,
     AttendanceModule,

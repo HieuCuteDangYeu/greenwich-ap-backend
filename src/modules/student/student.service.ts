@@ -8,6 +8,7 @@ import { In, Repository } from 'typeorm';
 import { Class } from '../class/entities/class.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { StaffService } from '../staff/staff.service';
+import { Term } from '../term/entities/term.entity';
 import { UserStatus } from '../user/dto/update-user-status.dto';
 import { UserService } from '../user/user.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -22,6 +23,9 @@ export class StudentService {
 
     @InjectRepository(Class)
     private readonly classRepo: Repository<Class>,
+
+    @InjectRepository(Term)
+    private readonly termRepo: Repository<Term>,
 
     private readonly userService: UserService,
 
@@ -139,6 +143,7 @@ export class StudentService {
     const updateFields: (keyof Omit<UpdateStudentDto, 'user'>)[] = [
       'faculty',
       'status',
+      'programDurationYears',
     ];
 
     const updates: Partial<
@@ -159,6 +164,15 @@ export class StudentService {
     }
 
     await this.studentRepo.save(student);
+
+    if (
+      dto.enrolmentDay !== undefined ||
+      dto.programDurationYears !== undefined
+    ) {
+      await this.updateAcademicFields([student], {
+        setStartTermIfMissing: false,
+      });
+    }
     return { success: true };
   }
 
@@ -214,7 +228,10 @@ export class StudentService {
     );
 
     student.classes = [...student.classes, ...newClasses];
-    return await this.studentRepo.save(student);
+    const [saved] = await this.updateAcademicFields([student], {
+      setStartTermIfMissing: true,
+    });
+    return saved;
   }
 
   // Remove a class from student
@@ -261,5 +278,117 @@ export class StudentService {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return `FGW${result}`;
+  }
+
+  private calculateCurrentYear(
+    enrolmentDay: Date,
+    programDurationYears: number,
+    now = new Date(),
+  ): string {
+    const enrol = new Date(enrolmentDay);
+    let years = now.getFullYear() - enrol.getFullYear();
+    const anniversaryPassed =
+      now.getMonth() > enrol.getMonth() ||
+      (now.getMonth() === enrol.getMonth() && now.getDate() >= enrol.getDate());
+
+    if (!anniversaryPassed) {
+      years -= 1;
+    }
+
+    const duration = Math.max(programDurationYears, 1);
+    const academicYear = Math.min(Math.max(years + 1, 1), duration);
+    return academicYear.toString();
+  }
+
+  private parseTermName(termName: string): { term: string; year: number } {
+    const match = termName.trim().match(/^(Spring|Summer|Fall)\s+(\d{4})$/i);
+    if (!match) {
+      throw new BadRequestException(
+        'Invalid term name format. Expected "Spring 2025".',
+      );
+    }
+
+    const term =
+      match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+    const year = Number(match[2]);
+    return { term, year };
+  }
+
+  private calculateEndTerm(startTerm: string, programDurationYears: number) {
+    const { term, year } = this.parseTermName(startTerm);
+    const terms = ['Spring', 'Summer', 'Fall'];
+    const startIndex = terms.indexOf(term);
+    const duration = Math.max(programDurationYears, 1);
+    const offset = duration * terms.length - 1;
+    const endIndex = startIndex + offset;
+    const yearOffset = Math.floor(endIndex / terms.length);
+    const termIndex = endIndex % terms.length;
+
+    return `${terms[termIndex]} ${year + yearOffset}`;
+  }
+
+  private async getCurrentTermName(): Promise<string> {
+    const today = new Date().toISOString().split('T')[0];
+    const term = await this.termRepo
+      .createQueryBuilder('term')
+      .where('term.start_date IS NOT NULL')
+      .andWhere('term.end_date IS NOT NULL')
+      .andWhere('term.start_date <= :today', { today })
+      .andWhere('term.end_date >= :today', { today })
+      .orderBy('term.start_date', 'DESC')
+      .getOne();
+
+    if (!term) {
+      throw new BadRequestException(
+        'No active term found for the current date.',
+      );
+    }
+
+    return term.name;
+  }
+
+  async updateAcademicFields(
+    students: Student[],
+    {
+      setStartTermIfMissing,
+    }: {
+      setStartTermIfMissing: boolean;
+    },
+  ): Promise<Student[]> {
+    if (students.length === 0) {
+      return [];
+    }
+
+    const now = new Date();
+    const needsStartTerm =
+      setStartTermIfMissing && students.some((student) => !student.startTerm);
+    const currentTermName = needsStartTerm
+      ? await this.getCurrentTermName()
+      : null;
+
+    students.forEach((student) => {
+      const duration = student.programDurationYears ?? 4;
+      student.currentYear = this.calculateCurrentYear(
+        student.enrolmentDay,
+        duration,
+        now,
+      );
+
+      if (!student.startTerm && currentTermName && setStartTermIfMissing) {
+        student.startTerm = currentTermName;
+      }
+
+      if (student.startTerm) {
+        const computedEndTerm = this.calculateEndTerm(
+          student.startTerm,
+          duration,
+        );
+        if (!student.endTerm || student.endTerm !== computedEndTerm) {
+          student.endTerm = computedEndTerm;
+        }
+      }
+    });
+
+    return this.studentRepo.save(students);
   }
 }
