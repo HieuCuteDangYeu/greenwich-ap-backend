@@ -16,7 +16,6 @@ interface FindAllOptions {
   limit?: number;
   programmeId?: number;
   departmentId?: number;
-  academicYear?: string;
   code?: string;
   name?: string;
   sort?: string;
@@ -56,11 +55,7 @@ export class TermService {
         departmentId: opts.departmentId,
       });
     }
-    if (opts.academicYear) {
-      baseQuery.andWhere('term.academic_year = :academicYear', {
-        academicYear: opts.academicYear,
-      });
-    }
+
     if (opts.code) {
       baseQuery.andWhere('term.code ILIKE :code', {
         code: `%${opts.code}%`,
@@ -86,7 +81,6 @@ export class TermService {
       endDate: 'term.end_date',
       code: 'term.code',
       name: 'term.name',
-      academicYear: 'term.academic_year',
       createdAt: 'term.created_at',
       id: 'term.id',
     };
@@ -154,7 +148,6 @@ export class TermService {
       programmeId: programme.id,
       code: dto.code,
       name: dto.name,
-      academicYear: dto.academicYear ?? null,
       startDate: dto.startDate ?? null,
       endDate: dto.endDate ?? null,
       departments,
@@ -195,7 +188,6 @@ export class TermService {
     this.termRepo.merge(term, {
       code: dto.code,
       name: dto.name,
-      academicYear: dto.academicYear,
       startDate: dto.startDate,
       endDate: dto.endDate,
     });

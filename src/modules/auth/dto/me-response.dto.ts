@@ -71,17 +71,17 @@ class StudentDto {
   @Expose()
   faculty: string;
 
-  @ApiProperty()
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  currentYear: string;
+  currentYear?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  startTerm: string;
+  startTerm?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ required: false, nullable: true })
   @Expose()
-  endTerm: string;
+  endTerm?: string | null;
 }
 
 export class MeResponseDto {

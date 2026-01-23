@@ -65,28 +65,4 @@ export class CreateStudentDto {
   @IsOptional()
   @IsEnum(['ENROLLED', 'SUSPENDED', 'GRADUATED', 'DROPPED'])
   status?: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED';
-
-  @ApiProperty({
-    description: 'Current year',
-    example: '1',
-  })
-  @IsNotEmpty()
-  @IsString()
-  currentYear!: string;
-
-  @ApiProperty({
-    description: 'Start term',
-    example: 'Spring 2025',
-  })
-  @IsNotEmpty()
-  @IsString()
-  startTerm!: string;
-
-  @ApiProperty({
-    description: 'End term',
-    example: 'Fall 2028',
-  })
-  @IsNotEmpty()
-  @IsString()
-  endTerm!: string;
 }

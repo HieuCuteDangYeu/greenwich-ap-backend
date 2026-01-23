@@ -73,17 +73,17 @@ export class Student {
   })
   status!: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED' | 'OTHER';
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  currentYear!: string;
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  currentYear?: string | null;
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  startTerm!: string;
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  startTerm?: string | null;
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  endTerm!: string;
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  endTerm?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

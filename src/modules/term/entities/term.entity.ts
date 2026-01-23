@@ -8,12 +8,12 @@ import {
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
+  RelationId,
   Unique,
   UpdateDateColumn,
-  RelationId,
 } from 'typeorm';
-import { Programme } from '../../programme/entities/programme.entity';
 import { Department } from '../../department/entities/department.entity';
+import { Programme } from '../../programme/entities/programme.entity';
 
 @Unique('UQ_term_programme_code', ['programme', 'code'])
 @Entity({ name: 'term' })
@@ -44,15 +44,6 @@ export class Term {
   @ApiProperty()
   @Column({ length: 150 })
   name!: string;
-
-  @ApiProperty({ required: false, nullable: true })
-  @Column({
-    name: 'academic_year',
-    type: 'varchar',
-    length: 20,
-    nullable: true,
-  })
-  academicYear?: string | null;
 
   @ApiProperty({
     required: false,
