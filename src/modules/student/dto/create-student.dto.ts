@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -39,6 +40,36 @@ export class CreateStudentDto {
   @IsNotEmpty()
   @IsDateString()
   enrolmentDay!: string;
+
+  @ApiProperty({
+    description: 'Current academic year',
+    required: false,
+    example: null,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  currentYear?: string;
+
+  @ApiProperty({
+    description: 'Start term (e.g., "Spring 2025")',
+    required: false,
+    example: null,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  startTerm?: string;
+
+  @ApiProperty({
+    description: 'End term (e.g., "Fall 2028")',
+    required: false,
+    example: null,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  endTerm?: string;
 
   @ApiProperty({
     description: 'Program duration in years',
