@@ -71,6 +71,10 @@ class StudentDto {
   @Expose()
   faculty: string;
 
+  @ApiProperty()
+  @Expose()
+  programDurationYears: number;
+
   @ApiProperty({ required: false, nullable: true })
   @Expose()
   currentYear?: string | null;
