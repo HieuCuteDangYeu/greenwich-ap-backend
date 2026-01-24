@@ -144,6 +144,9 @@ export class StudentService {
       'faculty',
       'status',
       'programDurationYears',
+      'currentYear',
+      'startTerm',
+      'endTerm',
     ];
 
     const updates: Partial<
