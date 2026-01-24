@@ -329,9 +329,16 @@ export class ClassService {
     });
 
     const saved = await this.classCourseRepository.save(newClassCourse);
-    await this.studentService.updateAcademicFields(classEntity.students || [], {
-      setStartTermIfMissing: true,
-    });
+    try {
+      await this.studentService.updateAcademicFields(
+        classEntity.students || [],
+        {
+          setStartTermIfMissing: true,
+        },
+      );
+    } catch (e) {
+      console.warn('updateAcademicFields failed:', e);
+    }
     return saved;
   }
 
