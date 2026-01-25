@@ -9,6 +9,7 @@ import { AttendanceService } from '../attendance/attendance.service';
 import { Course } from '../course/entities/course.entity';
 import { Room } from '../room/entities/room.entity';
 import { Staff } from '../staff/entities/staff.entity';
+import { StudentService } from '../student/student.service';
 import { AddCourseDto } from './dto/add-course.dto';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -34,6 +35,7 @@ export class ClassService {
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
     private readonly attendanceService: AttendanceService,
+    private readonly studentService: StudentService,
   ) {}
 
   create(createClassDto: CreateClassDto) {
@@ -309,7 +311,7 @@ export class ClassService {
   }
 
   async addCourse(id: number, addCourseDto: AddCourseDto) {
-    const classEntity = await this.findOne(id);
+    const classEntity = await this.findOne(id, ['students']);
 
     const course = await this.courseRepository.findOneBy({
       id: addCourseDto.courseId,
@@ -326,7 +328,18 @@ export class ClassService {
       note: addCourseDto.note,
     });
 
-    return this.classCourseRepository.save(newClassCourse);
+    const saved = await this.classCourseRepository.save(newClassCourse);
+    try {
+      await this.studentService.updateAcademicFields(
+        classEntity.students || [],
+        {
+          setStartTermIfMissing: true,
+        },
+      );
+    } catch (e) {
+      console.warn('updateAcademicFields failed:', e);
+    }
+    return saved;
   }
 
   async removeCourse(id: number, courseId: number) {

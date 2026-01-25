@@ -51,6 +51,17 @@ export class Student {
   @Column({ name: 'enrolment_day', type: 'date', nullable: false })
   enrolmentDay!: Date;
 
+  @ApiProperty({
+    description: 'Program duration in years',
+    example: 4,
+  })
+  @Column({
+    name: 'program_duration_years',
+    type: 'int',
+    default: 4,
+  })
+  programDurationYears!: number;
+
   @ApiProperty({ description: 'Mentor (Staff reference)', required: false })
   @Column({ name: 'mentor_id', type: 'bigint', nullable: true })
   mentorId?: number | null;
@@ -73,17 +84,17 @@ export class Student {
   })
   status!: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED' | 'OTHER';
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  currentYear!: string;
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  currentYear?: string | null;
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  startTerm!: string;
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  startTerm?: string | null;
 
-  @ApiProperty()
-  @Column({ type: 'varchar', length: 20, nullable: false })
-  endTerm!: string;
+  @ApiProperty({ required: false, nullable: true })
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  endTerm?: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

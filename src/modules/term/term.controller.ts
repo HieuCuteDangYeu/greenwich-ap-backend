@@ -47,7 +47,6 @@ export class TermController {
   @ApiPaginationQuery()
   @ApiQuery({ name: 'programmeId', required: false, type: Number })
   @ApiQuery({ name: 'departmentId', required: false, type: Number })
-  @ApiQuery({ name: 'academicYear', required: false, type: String })
   @ApiQuery({ name: 'code', required: false, type: String })
   @ApiQuery({ name: 'name', required: false, type: String })
   findAll(
@@ -57,7 +56,6 @@ export class TermController {
     programmeId?: number,
     @Query('departmentId', new ParseIntPipe({ optional: true }))
     departmentId?: number,
-    @Query('academicYear') academicYear?: string,
     @Query('code') code?: string,
     @Query('name') name?: string,
     @Query('sort') sort?: string,
@@ -68,7 +66,6 @@ export class TermController {
       limit,
       programmeId,
       departmentId,
-      academicYear,
       code,
       name,
       sort,

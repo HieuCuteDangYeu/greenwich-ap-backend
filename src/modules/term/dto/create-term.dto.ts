@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
 
@@ -21,16 +22,18 @@ export class CreateTermDto {
   @MaxLength(20)
   code!: string;
 
-  @ApiProperty({ maxLength: 150 })
+  @ApiProperty({
+    maxLength: 150,
+    description: 'Term name in the format "<Term> <Year>", e.g. "Spring 2025".',
+    example: 'Spring 2025',
+  })
   @IsString()
   @MaxLength(150)
+  @Matches(/^(Spring|Summer|Fall)\s+\d{4}$/i, {
+    message:
+      'Term name must be "Spring <Year>", "Summer <Year>", or "Fall <Year>".',
+  })
   name!: string;
-
-  @ApiProperty({ required: false, maxLength: 20 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  academicYear?: string;
 
   @ApiProperty({ required: false, type: String, format: 'date' })
   @IsOptional()
