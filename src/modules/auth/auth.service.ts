@@ -1,32 +1,28 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectRepository } from '@nestjs/typeorm';
+import bcrypt from 'bcrypt';
+import { plainToInstance } from 'class-transformer';
+import { randomBytes, randomUUID } from 'crypto';
+import { LessThan, Repository } from 'typeorm';
+import { AdminService } from '../admin/admin.service';
+import { Staff } from '../staff/entities/staff.entity';
+import { Student } from '../student/entities/student.entity';
+import { User } from '../user/entities/user.entity';
 import { UserService } from '../user/user.service';
 import { GoogleUserDto } from './dto/google-user.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
-import { JwtPayload } from './types/jwt-payload.type';
-import { User } from '../user/entities/user.entity';
-import bcrypt from 'bcrypt';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { Staff } from '../staff/entities/staff.entity';
-import { Student } from '../student/entities/student.entity';
-import { randomBytes, randomUUID } from 'crypto';
-import { StaffService } from '../staff/staff.service';
-import { StudentService } from '../student/student.service';
-import { AdminService } from '../admin/admin.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan } from 'typeorm';
-import { TempAuthCode } from './entities/temp-auth-code.entity';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { plainToInstance } from 'class-transformer';
 import { MeResponseDto } from './dto/me-response.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { TempAuthCode } from './entities/temp-auth-code.entity';
+import { JwtPayload } from './types/jwt-payload.type';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    private readonly staffService: StaffService,
-    private readonly studentService: StudentService,
     private readonly adminService: AdminService,
     @InjectRepository(TempAuthCode)
     private readonly tempAuthCodeRepository: Repository<TempAuthCode>,

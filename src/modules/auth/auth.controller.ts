@@ -8,29 +8,28 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import type { Response, Request } from 'express';
-import { plainToInstance } from 'class-transformer';
 import { AuthGuard } from '@nestjs/passport';
+import { plainToInstance } from 'class-transformer';
+import type { Request, Response } from 'express';
+import { User } from '../user/entities/user.entity';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RolesGuard } from './guards/roles.guard';
 import { GoogleUserDto } from './dto/google-user.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { MeResponseDto } from './dto/me-response.dto';
-import { User } from '../user/entities/user.entity';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 import {
-  ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiOperation,
+  ApiResponse,
 } from '@nestjs/swagger';
 import {
   ApiController,
   CommonApiResponses,
 } from '../../common/decorators/swagger.decorator';
-import { LoginResponseDto, RefreshResponseDto } from './dto/login-response.dto';
 
 interface GoogleAuthRequest extends Request {
   user?: GoogleUserDto;
@@ -73,7 +72,7 @@ export class AuthController {
   async login(
     @Body() loginDto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<LoginResponseDto> {
+  ) {
     const data = await this.authService.login(
       loginDto.email,
       loginDto.password,
@@ -83,8 +82,6 @@ export class AuthController {
       user: plainToInstance(MeResponseDto, data.user, {
         excludeExtraneousValues: true,
       }),
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
     };
   }
 
@@ -126,7 +123,7 @@ export class AuthController {
   async exchangeCode(
     @Body() body: { code: string },
     @Res({ passthrough: true }) res: Response,
-  ): Promise<LoginResponseDto> {
+  ) {
     const userData = await this.authService.verifyAuthCode(body.code);
     if (!userData) {
       throw new UnauthorizedException('Invalid or expired code');
@@ -138,8 +135,6 @@ export class AuthController {
       user: plainToInstance(MeResponseDto, data.user, {
         excludeExtraneousValues: true,
       }),
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
     };
   }
 
@@ -168,7 +163,7 @@ export class AuthController {
   async refresh(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<RefreshResponseDto> {
+  ) {
     const refreshToken = req.cookies.refresh_token as string;
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not found');
@@ -177,8 +172,7 @@ export class AuthController {
     const tokens = await this.authService.refreshTokens(refreshTokenDto);
     this.setAuthCookies(res, tokens);
     return {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
+      message: 'Tokens refreshed successfully',
     };
   }
 

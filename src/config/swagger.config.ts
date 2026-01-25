@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { swaggerAutoAuthScript } from './swagger-auto-auth';
 
 /**
  * Interface for Swagger configuration options
@@ -70,12 +69,8 @@ export const setupSwagger = (
       config.addServer(server.url, server.description);
     });
   } else {
-    // Default servers based on environment
-    if (process.env.NODE_ENV === 'production') {
-      config.addServer(
-        'https://greenwich-ap-backend.onrender.com',
-        'Production server',
-      );
+    if (process.env.NODE_ENV === 'production' && process.env.BACKEND_URL) {
+      config.addServer(process.env.BACKEND_URL, 'Production Server');
     } else {
       const port = process.env.PORT || 3000;
       config.addServer(`http://localhost:${port}`, 'Development server');
@@ -119,6 +114,7 @@ export const setupSwagger = (
 
   SwaggerModule.setup(swaggerPath, app, document, {
     swaggerOptions: {
+      withCredentials: true,
       persistAuthorization: true,
       docExpansion: 'none',
       filter: true,
@@ -160,6 +156,5 @@ export const setupSwagger = (
     customCssUrl: [
       'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.15.5/swagger-ui.min.css',
     ],
-    customJsStr: swaggerAutoAuthScript,
   });
 };
