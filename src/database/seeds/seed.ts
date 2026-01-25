@@ -1,6 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
-import path from 'path';
+import * as path from 'path';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { QuestionType } from '../../common/enums/question-type.enum';
 import { Admin } from '../../modules/admin/entities/admin.entity';
@@ -13,38 +13,32 @@ dotenv.config();
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-let config: DataSourceOptions;
+const config: DataSourceOptions = {
+  type: 'postgres',
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
+  username: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  synchronize: false,
+  logging: true,
+  entities: isProduction
+    ? [path.join(__dirname, '../../modules/**/*.entity.js')]
+    : [path.join(__dirname, '../../modules/**/*.entity.{ts,js}')],
 
-if (isProduction) {
-  config = {
-    type: 'postgres',
-    url: process.env.DB_URL,
-    ssl: {
-      rejectUnauthorized: false,
-    },
-    entities: [path.join(__dirname, '../../modules/**/*.entity.js')],
-    synchronize: false,
-    logging: false, // Changed to false for a truly silent script
-  };
-} else {
-  config = {
-    type: 'postgres',
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT || '5432', 10),
-    username: process.env.DB_USERNAME,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
-    entities: [path.join(__dirname, '../../modules/**/*.entity.{ts,js}')],
-    synchronize: false,
-    logging: false, // Changed to false for a truly silent script
-  };
-}
+  ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+};
 
 const AppDataSource = new DataSource(config);
 
 export const seed = async (): Promise<void> => {
+  console.log('Starting Seed Script...');
+
   try {
-    await AppDataSource.initialize();
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize();
+      console.log('Database Connected successfully.');
+    }
 
     const campusRepo = AppDataSource.getRepository(Campus);
     const campusData = [
@@ -57,6 +51,7 @@ export const seed = async (): Promise<void> => {
     for (const campus of campusData) {
       const exists = await campusRepo.findOne({ where: { code: campus.code } });
       if (!exists) {
+        console.log(`   + Creating Campus: ${campus.name}`);
         await campusRepo.save(campus);
       }
     }
@@ -72,14 +67,15 @@ export const seed = async (): Promise<void> => {
     for (const role of roleData) {
       const exists = await roleRepo.findOne({ where: { name: role.name } });
       if (!exists) {
+        console.log(`   + Creating Role: ${role.name}`);
         await roleRepo.save(role);
       }
     }
 
     const userRepo = AppDataSource.getRepository(User);
     const adminRepo = AppDataSource.getRepository(Admin);
-    const adminEmail = 'admin@greenwich.edu';
-    const adminPassword = 'secret';
+    const adminEmail = process.env.PGADMIN_EMAIL || 'admin@greenwich.edu';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'secret';
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
     const adminRole = await roleRepo.findOne({ where: { name: 'Admin' } });
@@ -87,7 +83,7 @@ export const seed = async (): Promise<void> => {
 
     if (!adminRole || !hcmCampus) {
       throw new Error(
-        'Admin role or Ho Chi Minh campus not found. Please ensure previous seeding completed successfully.',
+        'Critical Error: Admin role or Ho Chi Minh campus not found. Seeding aborted.',
       );
     }
 
@@ -96,23 +92,30 @@ export const seed = async (): Promise<void> => {
     });
 
     if (!existingAdmin) {
+      console.log(`   + Creating Admin User (${adminEmail})...`);
       const adminUser = await userRepo.save({
         email: adminEmail,
         roleId: adminRole.id,
         campusId: hcmCampus.id,
+        fullName: 'System Administrator',
+        code: 'ADMIN001',
+        phoneNumber: '0000000000',
       });
 
       await adminRepo.save({
         userId: adminUser.id,
         password: hashedPassword,
       });
+    } else {
+      console.log('   - Admin user already exists. Skipping.');
     }
 
-    // Seed feedback questions
+    // 5. Seed Feedback Questions
     const feedbackQuestionRepo = AppDataSource.getRepository(FeedbackQuestion);
     const existingQuestionsCount = await feedbackQuestionRepo.count();
 
     if (existingQuestionsCount === 0) {
+      console.log('   + Seeding initial Feedback Questions...');
       const questions = [
         {
           questionText: "Regarding the teacher's punctuality",
@@ -239,6 +242,9 @@ export const seed = async (): Promise<void> => {
 
       await feedbackQuestionRepo.save(questions);
     } else {
+      console.log(
+        '   - Feedback questions exist. Updating translations if necessary...',
+      );
       const updates = [
         {
           questionOrder: 1,
@@ -268,12 +274,15 @@ export const seed = async (): Promise<void> => {
         );
       }
     }
+
+    console.log('Seeding complete!');
   } catch (error) {
     console.error('Error during seeding:', error);
-    throw error;
+    process.exit(1);
   } finally {
     if (AppDataSource.isInitialized) {
       await AppDataSource.destroy();
+      console.log('Database connection closed.');
     }
   }
 };
