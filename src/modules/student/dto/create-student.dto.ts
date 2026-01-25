@@ -3,10 +3,12 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator';
 import { UserInStudentDto } from './user-in-student.dto';
@@ -38,6 +40,47 @@ export class CreateStudentDto {
   @IsDateString()
   enrolmentDay!: string;
 
+  // @ApiProperty({
+  //   description: 'Current academic year',
+  //   required: false,
+  //   example: null,
+  // })
+  // @IsOptional()
+  // @IsString()
+  // @MaxLength(20)
+  // currentYear?: string;
+
+  // @ApiProperty({
+  //   description: 'Start term (e.g., "Spring 2025")',
+  //   required: false,
+  //   example: null,
+  // })
+  // @IsOptional()
+  // @IsString()
+  // @MaxLength(20)
+  // startTerm?: string;
+
+  // @ApiProperty({
+  //   description: 'End term (e.g., "Fall 2028")',
+  //   required: false,
+  //   example: null,
+  // })
+  // @IsOptional()
+  // @IsString()
+  // @MaxLength(20)
+  // endTerm?: string;
+
+  @ApiProperty({
+    description: 'Program duration in years',
+    required: false,
+    example: 4,
+    default: 4,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  programDurationYears?: number;
+
   @ApiProperty({
     description: 'Mentor ID',
     required: false,
@@ -65,28 +108,4 @@ export class CreateStudentDto {
   @IsOptional()
   @IsEnum(['ENROLLED', 'SUSPENDED', 'GRADUATED', 'DROPPED'])
   status?: 'ENROLLED' | 'SUSPENDED' | 'GRADUATED' | 'DROPPED';
-
-  @ApiProperty({
-    description: 'Current year',
-    example: '1',
-  })
-  @IsNotEmpty()
-  @IsString()
-  currentYear!: string;
-
-  @ApiProperty({
-    description: 'Start term',
-    example: 'Spring 2025',
-  })
-  @IsNotEmpty()
-  @IsString()
-  startTerm!: string;
-
-  @ApiProperty({
-    description: 'End term',
-    example: 'Fall 2028',
-  })
-  @IsNotEmpty()
-  @IsString()
-  endTerm!: string;
 }
