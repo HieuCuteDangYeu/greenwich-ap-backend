@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -23,6 +24,7 @@ export const CLASS_SESSION_STATUS = [
 export type ClassSessionStatus = (typeof CLASS_SESSION_STATUS)[number];
 
 @Entity({ name: 'class_session' })
+@Index(['room', 'dateOn', 'timeSlot'])
 export class ClassSession {
   @ApiProperty()
   @PrimaryGeneratedColumn({ type: 'bigint' })
@@ -79,4 +81,7 @@ export class ClassSession {
   @ManyToOne(() => TimeSlot, (slot) => slot.sessions, { nullable: true })
   @JoinColumn({ name: 'time_slot_id' })
   timeSlot?: TimeSlot | null;
+
+  @RelationId((session: ClassSession) => session.timeSlot)
+  timeSlotId?: number | null;
 }

@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClassSession } from '../class/entities/class-session.entity';
-import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
+// import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
 import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { TimeSlot } from './entities/time-slot.entity';
@@ -48,26 +48,26 @@ export class TimeSlotService {
     await this.timeSlotRepository.remove(timeSlot);
   }
 
-  async assignSlotToSession(assignTimeSlotDto: AssignTimeSlotDto) {
-    const { sessionId, timeSlotId } = assignTimeSlotDto;
+  // async assignSlotToSession(assignTimeSlotDto: AssignTimeSlotDto) {
+  //   const { sessionId, timeSlotId } = assignTimeSlotDto;
 
-    const session = await this.classSessionRepository.findOne({
-      where: { id: sessionId },
-      relations: ['timeSlot'],
-    });
+  //   const session = await this.classSessionRepository.findOne({
+  //     where: { id: sessionId },
+  //     relations: ['timeSlot'],
+  //   });
 
-    if (!session) {
-      throw new NotFoundException(`Session with ID ${sessionId} not found`);
-    }
+  //   if (!session) {
+  //     throw new NotFoundException(`Session with ID ${sessionId} not found`);
+  //   }
 
-    const timeSlot = await this.findOne(timeSlotId);
+  //   const timeSlot = await this.findOne(timeSlotId);
 
-    // Assign (overwrite) the slot
-    session.timeSlot = timeSlot;
-    await this.classSessionRepository.save(session);
+  //   // Assign (overwrite) the slot
+  //   session.timeSlot = timeSlot;
+  //   await this.classSessionRepository.save(session);
 
-    return session;
-  }
+  //   return session;
+  // }
 
   async getSessionSlots(sessionId: number) {
     const session = await this.classSessionRepository.findOne({

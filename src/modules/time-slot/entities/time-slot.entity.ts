@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ClassSession } from '../../class/entities/class-session.entity';
+import { RoomBookingSlot } from '../../room-booking/entities/room-booking-slot.entity';
 
 @Entity('time_slot')
 export class TimeSlot {
@@ -34,4 +35,7 @@ export class TimeSlot {
 
   @OneToMany(() => ClassSession, (session) => session.timeSlot)
   sessions?: ClassSession[];
+
+  @OneToMany(() => RoomBookingSlot, (slot) => slot.timeSlot)
+  roomBookingSlots?: RoomBookingSlot[];
 }
