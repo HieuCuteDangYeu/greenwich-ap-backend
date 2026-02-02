@@ -263,7 +263,7 @@ export class RescheduleRequestService {
         request.reviewNote = dto.reviewNote ?? null;
         await manager.save(RescheduleRequest, request);
 
-        return this.rescheduleRequestRepository.findOne({
+        return manager.getRepository(RescheduleRequest).findOne({
           where: { id: request.id },
           relations: [
             'session',

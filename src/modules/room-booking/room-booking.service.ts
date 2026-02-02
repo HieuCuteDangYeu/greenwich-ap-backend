@@ -109,12 +109,38 @@ export class RoomBookingService {
 
       await manager.save(RoomBookingSlot, slots);
 
-      return this.findOne(savedBooking.id, requester);
+      return this.findOneWithManager(manager, savedBooking.id, requester);
     });
   }
 
   async findOne(id: number, currentUser?: AuthUser) {
     const booking = await this.roomBookingRepository.findOne({
+      where: { id },
+      relations: ['slots', 'slots.timeSlot', 'room', 'requesterUser'],
+      order: { slots: { timeSlotId: 'ASC' } },
+    });
+
+    if (!booking) {
+      throw new NotFoundException(`Room booking with ID ${id} not found`);
+    }
+
+    if (
+      currentUser &&
+      booking.requesterUserId !== currentUser.id &&
+      !this.isStaffOrAdmin(currentUser)
+    ) {
+      throw new ForbiddenException('You do not have access to this booking');
+    }
+
+    return booking;
+  }
+
+  private async findOneWithManager(
+    manager: Repository<RoomBooking>['manager'],
+    id: number,
+    currentUser?: AuthUser,
+  ) {
+    const booking = await manager.getRepository(RoomBooking).findOne({
       where: { id },
       relations: ['slots', 'slots.timeSlot', 'room', 'requesterUser'],
       order: { slots: { timeSlotId: 'ASC' } },
