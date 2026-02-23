@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -7,9 +8,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { AttendanceService } from '../attendance/attendance.service';
 import { Course } from '../course/entities/course.entity';
+import { RoomConflictService } from '../room-conflict/room-conflict.service';
 import { Room } from '../room/entities/room.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { StudentService } from '../student/student.service';
+import { TimeSlot } from '../time-slot/entities/time-slot.entity';
 import { AddCourseDto } from './dto/add-course.dto';
 import { CreateClassSessionDto } from './dto/create-class-session.dto';
 import { CreateClassDto } from './dto/create-class.dto';
@@ -34,8 +37,11 @@ export class ClassService {
     private readonly roomRepository: Repository<Room>,
     @InjectRepository(Staff)
     private readonly staffRepository: Repository<Staff>,
+    @InjectRepository(TimeSlot)
+    private readonly timeSlotRepository: Repository<TimeSlot>,
     private readonly attendanceService: AttendanceService,
     private readonly studentService: StudentService,
+    private readonly roomConflictService: RoomConflictService,
   ) {}
 
   create(createClassDto: CreateClassDto) {
@@ -88,20 +94,52 @@ export class ClassService {
       );
     }
 
-    const newSession = this.classSessionRepository.create({
-      class: classEntity,
-      course,
-      courseId: course.id,
-      classId: classEntity.id,
-      dateOn: createSessionDto.dateOn,
-      room,
-      roomId: room.id,
-      teacher,
-      teacherId: teacher.id,
-      status: createSessionDto.status ?? 'SCHEDULED',
+    const timeSlot = await this.timeSlotRepository.findOne({
+      where: { id: createSessionDto.timeSlotId },
     });
 
-    const savedSession = await this.classSessionRepository.save(newSession);
+    if (!timeSlot) {
+      throw new NotFoundException(
+        `Time slot with ID ${createSessionDto.timeSlotId} not found`,
+      );
+    }
+
+    const savedSession = await this.classSessionRepository.manager.transaction(
+      async (manager) => {
+        const conflict = await this.roomConflictService.checkRoomConflict({
+          roomId: room.id,
+          dateOn: createSessionDto.dateOn,
+          timeSlotIds: [createSessionDto.timeSlotId],
+          manager,
+        });
+
+        if (conflict.conflictingTimeSlotIds.length > 0) {
+          throw new ConflictException({
+            message: `Room is already occupied on ${createSessionDto.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+              ', ',
+            )}.`,
+            conflicts: conflict.conflictingTimeSlotIds,
+          });
+        }
+
+        const newSession = manager.create(ClassSession, {
+          class: classEntity,
+          course,
+          courseId: course.id,
+          classId: classEntity.id,
+          dateOn: createSessionDto.dateOn,
+          room,
+          roomId: room.id,
+          teacher,
+          teacherId: teacher.id,
+          timeSlot,
+          timeSlotId: timeSlot.id,
+          status: createSessionDto.status ?? 'SCHEDULED',
+        });
+
+        return manager.save(ClassSession, newSession);
+      },
+    );
 
     // Get all students in this class
     const students = await this.findStudentsByClass(classId);
@@ -227,11 +265,51 @@ export class ClassService {
       session.teacher = teacher;
       session.teacherId = teacher.id;
     }
-    if (updateDto.status !== undefined) {
-      session.status = updateDto.status;
+    if (updateDto.timeSlotId !== undefined) {
+      const timeSlot = await this.timeSlotRepository.findOne({
+        where: { id: updateDto.timeSlotId },
+      });
+
+      if (!timeSlot) {
+        throw new NotFoundException(
+          `Time slot with ID ${updateDto.timeSlotId} not found`,
+        );
+      }
+
+      session.timeSlot = timeSlot;
+      session.timeSlotId = timeSlot.id;
     }
 
-    return this.classSessionRepository.save(session);
+    const nextRoomId = updateDto.roomId ?? session.roomId;
+    const nextDateOn = updateDto.dateOn ?? session.dateOn;
+    const nextTimeSlotId =
+      updateDto.timeSlotId ?? session.timeSlotId ?? undefined;
+
+    return this.classSessionRepository.manager.transaction(async (manager) => {
+      if (nextTimeSlotId) {
+        const conflict = await this.roomConflictService.checkRoomConflict({
+          roomId: nextRoomId,
+          dateOn: nextDateOn,
+          timeSlotIds: [nextTimeSlotId],
+          excludeSessionId: session.id,
+          manager,
+        });
+
+        if (conflict.conflictingTimeSlotIds.length > 0) {
+          throw new ConflictException({
+            message: `Room is already occupied on ${nextDateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+              ', ',
+            )}.`,
+            conflicts: conflict.conflictingTimeSlotIds,
+          });
+        }
+      }
+      if (updateDto.status !== undefined) {
+        session.status = updateDto.status;
+      }
+
+      return manager.save(ClassSession, session);
+    });
   }
 
   async removeSession(classId: number, sessionId: number) {

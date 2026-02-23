@@ -11,6 +11,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ClassSession } from '../../class/entities/class-session.entity';
+import { RescheduleRequest } from '../../reschedule-request/entities/reschedule-request.entity';
 import { User } from '../../user/entities/user.entity';
 import { StaffRole } from './staff_role.entity';
 
@@ -76,6 +77,12 @@ export class Staff {
 
   @OneToMany(() => ClassSession, (session) => session.teacher)
   classSessions!: ClassSession[];
+
+  @OneToMany(() => RescheduleRequest, (request) => request.requestedByTeacher)
+  rescheduleRequests!: RescheduleRequest[];
+
+  @OneToMany(() => RescheduleRequest, (request) => request.reviewedByStaff)
+  reviewedRescheduleRequests!: RescheduleRequest[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

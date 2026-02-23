@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { ClassSession } from '../../class/entities/class-session.entity';
+import { RoomBooking } from '../../room-booking/entities/room-booking.entity';
 import { Campus } from '../../user/entities/campus.entity';
 
 @Entity({ name: 'room' })
@@ -49,4 +50,7 @@ export class Room {
 
   @OneToMany(() => ClassSession, (session) => session.room)
   sessions?: ClassSession[];
+
+  @OneToMany(() => RoomBooking, (booking) => booking.room)
+  roomBookings?: RoomBooking[];
 }

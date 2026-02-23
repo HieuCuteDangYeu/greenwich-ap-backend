@@ -24,7 +24,7 @@ import {
 import { UserRole } from '../../common/enums/roles.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
+// import { AssignTimeSlotDto } from './dto/assign-time-slots.dto';
 import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { TimeSlot } from './entities/time-slot.entity';
@@ -71,15 +71,15 @@ export class TimeSlotController {
     return this.timeSlotService.remove(id);
   }
 
-  @Post('assign-slot')
-  @ApiOperation({ summary: 'Assign a time slot to a class session' })
-  @ApiResponse({
-    status: 201,
-    description: 'Time slot has been successfully assigned to the session.',
-  })
-  assignSlotToSession(@Body() assignTimeSlotDto: AssignTimeSlotDto) {
-    return this.timeSlotService.assignSlotToSession(assignTimeSlotDto);
-  }
+  // @Post('assign-slot')
+  // @ApiOperation({ summary: 'Assign a time slot to a class session' })
+  // @ApiResponse({
+  //   status: 201,
+  //   description: 'Time slot has been successfully assigned to the session.',
+  // })
+  // assignSlotToSession(@Body() assignTimeSlotDto: AssignTimeSlotDto) {
+  //   return this.timeSlotService.assignSlotToSession(assignTimeSlotDto);
+  // }
 
   @Get('sessions/:sessionId')
   @ApiOperation({ summary: 'Get the assigned time slot for a class session' })

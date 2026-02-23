@@ -1,20 +1,21 @@
+import { ApiProperty } from '@nestjs/swagger';
 import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  OneToMany,
-  CreateDateColumn,
-  UpdateDateColumn,
   BeforeInsert,
   BeforeUpdate,
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { Role } from './role.entity';
-import { Campus } from './campus.entity';
-import { ApiProperty } from '@nestjs/swagger';
-import { Thread } from '../../thread/entities/thread.entity';
 import { Comment } from '../../comment/entities/comment.entity';
+import { RoomBooking } from '../../room-booking/entities/room-booking.entity';
+import { Thread } from '../../thread/entities/thread.entity';
+import { Campus } from './campus.entity';
+import { Role } from './role.entity';
 
 @Entity({ name: 'user_account' })
 export class User {
@@ -133,4 +134,7 @@ export class User {
 
   @OneToMany(() => Comment, (comment) => comment.createdBy)
   comments!: Comment[];
+
+  @OneToMany(() => RoomBooking, (booking) => booking.requesterUser)
+  roomBookings?: RoomBooking[];
 }

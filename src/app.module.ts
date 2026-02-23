@@ -16,7 +16,10 @@ import { DepartmentModule } from './modules/department/department.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { GuardianModule } from './modules/guardian/guardian.module';
 import { ProgrammeModule } from './modules/programme/programme.module';
+import { RescheduleRequestModule } from './modules/reschedule-request/reschedule-request.module';
+import { RoomBookingModule } from './modules/room-booking/room-booking.module';
 import { RoomModule } from './modules/room/room.module';
+import { ScheduleModule as CalendarScheduleModule } from './modules/schedule/schedule.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { StudentModule } from './modules/student/student.module';
 import { TermModule } from './modules/term/term.module';
@@ -50,6 +53,7 @@ import { UserModule } from './modules/user/user.module';
     ThreadModule,
     CommentModule,
     RoomModule,
+    RoomBookingModule,
     TimeSlotModule,
     AttendanceModule,
     GuardianModule,
@@ -57,6 +61,8 @@ import { UserModule } from './modules/user/user.module';
     TermModule,
     ProgrammeModule,
     FeedbackModule,
+    RescheduleRequestModule,
+    CalendarScheduleModule,
   ],
   controllers: [HealthController],
   providers: [],

@@ -20,6 +20,10 @@ export class CreateClassSessionDto {
   @IsInt()
   teacherId!: number;
 
+  @ApiProperty({ description: 'Time slot assigned to the session' })
+  @IsInt()
+  timeSlotId!: number;
+
   @ApiProperty({ enum: CLASS_SESSION_STATUS, required: false })
   @IsEnum(CLASS_SESSION_STATUS)
   @IsOptional()

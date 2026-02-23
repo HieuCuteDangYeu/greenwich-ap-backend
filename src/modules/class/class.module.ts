@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AttendanceModule } from '../attendance/attendance.module';
 import { CourseModule } from '../course/course.module';
+import { RoomConflictModule } from '../room-conflict/room-conflict.module';
 import { Room } from '../room/entities/room.entity';
 import { Staff } from '../staff/entities/staff.entity';
 import { StudentModule } from '../student/student.module';
+import { TimeSlot } from '../time-slot/entities/time-slot.entity';
 import { ClassController } from './class.controller';
 import { ClassService } from './class.service';
 import { ClassCourse } from './entities/class-course.entity';
@@ -13,10 +15,18 @@ import { Class } from './entities/class.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Class, ClassCourse, ClassSession, Room, Staff]),
+    TypeOrmModule.forFeature([
+      Class,
+      ClassCourse,
+      ClassSession,
+      Room,
+      Staff,
+      TimeSlot,
+    ]),
     CourseModule,
     StudentModule,
     AttendanceModule,
+    RoomConflictModule,
   ],
   controllers: [ClassController],
   providers: [ClassService],
