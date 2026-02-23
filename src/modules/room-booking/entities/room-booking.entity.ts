@@ -32,7 +32,7 @@ export class RoomBooking {
   @Column({ name: 'room_id', type: 'bigint' })
   roomId!: number;
 
-  @ManyToOne(() => Room, { eager: true, nullable: false })
+  @ManyToOne(() => Room, { nullable: false })
   @JoinColumn({ name: 'room_id' })
   room!: Room;
 
@@ -40,7 +40,7 @@ export class RoomBooking {
   @Column({ name: 'requester_user_id', type: 'bigint' })
   requesterUserId!: number;
 
-  @ManyToOne(() => User, { eager: true, nullable: false })
+  @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'requester_user_id' })
   requesterUser!: User;
 

@@ -38,7 +38,7 @@ export class RescheduleRequestController {
   ) {}
 
   @Post()
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @Roles(UserRole.STAFF)
   @StaffRoles(StaffRole.TEACHER)
   @ApiCreateOperation(RescheduleRequest)
   create(@CurrentUser() user: User, @Body() dto: CreateRescheduleRequestDto) {
@@ -46,7 +46,7 @@ export class RescheduleRequestController {
   }
 
   @Get('my')
-  @Roles(UserRole.STAFF, UserRole.ADMIN)
+  @Roles(UserRole.STAFF)
   @StaffRoles(StaffRole.TEACHER)
   @ApiFindAllOperation(RescheduleRequest)
   findMyRequests(@CurrentUser() user: User) {

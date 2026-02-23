@@ -96,6 +96,13 @@ export class ScheduleService {
       bookingQuery.andWhere('slots.time_slot_id = :timeSlotId', { timeSlotId });
     }
 
+    // Room bookings are not bound to class/course/teacher dimensions.
+    // If any of those filters are present, exclude booking rows from the
+    // merged response to keep filtering behavior consistent.
+    if (classId || courseId || teacherId) {
+      bookingQuery.andWhere('1 = 0');
+    }
+
     const bookings = await bookingQuery.getMany();
 
     const items: ScheduleItemDto[] = [

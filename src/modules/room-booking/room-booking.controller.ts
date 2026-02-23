@@ -25,9 +25,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { User } from '../user/entities/user.entity';
 import { CreateRoomBookingDto } from './dto/create-room-booking.dto';
-import { RoomBooking } from './entities/room-booking.entity';
+import { BookingStatus, RoomBooking } from './entities/room-booking.entity';
 import { RoomBookingService } from './room-booking.service';
-
 @ApiController('Room Bookings', { requireAuth: true })
 @Controller('room-bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -54,7 +53,7 @@ export class RoomBookingController {
     @Query('to') to?: string,
   ) {
     return this.roomBookingService.findMyBookings(user.id, {
-      status: status as any,
+      status: status as BookingStatus,
       from,
       to,
     });
@@ -76,7 +75,7 @@ export class RoomBookingController {
     @Query('to') to?: string,
   ) {
     return this.roomBookingService.findAll({
-      status: status as any,
+      status: status as BookingStatus,
       roomId: roomId ? Number(roomId) : undefined,
       requesterUserId: requesterUserId ? Number(requesterUserId) : undefined,
       from,

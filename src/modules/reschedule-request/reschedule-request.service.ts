@@ -209,25 +209,26 @@ export class RescheduleRequestService {
       return this.rescheduleRequestRepository.save(request);
     }
 
-    const conflict = await this.roomConflictService.checkRoomConflict({
-      roomId: request.newRoomId,
-      dateOn: request.newDateOn,
-      timeSlotIds: [request.newTimeSlotId],
-      bookingStatuses: ['PENDING', 'APPROVED'],
-      excludeSessionId: request.sessionId,
-    });
-
-    if (conflict.conflictingTimeSlotIds.length > 0) {
-      throw new ConflictException({
-        message: `Cannot approve reschedule. The room is occupied on ${request.newDateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
-          ', ',
-        )}. Please update the request before approving.`,
-        conflicts: conflict.conflictingTimeSlotIds,
-      });
-    }
-
     return this.rescheduleRequestRepository.manager.transaction(
       async (manager) => {
+        const conflict = await this.roomConflictService.checkRoomConflict({
+          roomId: request.newRoomId,
+          dateOn: request.newDateOn,
+          timeSlotIds: [request.newTimeSlotId],
+          bookingStatuses: ['PENDING', 'APPROVED'],
+          excludeSessionId: request.sessionId,
+          manager,
+        });
+
+        if (conflict.conflictingTimeSlotIds.length > 0) {
+          throw new ConflictException({
+            message: `Cannot approve reschedule. The room is occupied on ${request.newDateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+              ', ',
+            )}. Please update the request before approving.`,
+            conflicts: conflict.conflictingTimeSlotIds,
+          });
+        }
+
         const session = await manager.findOne(ClassSession, {
           where: { id: request.sessionId },
           relations: ['room', 'timeSlot'],

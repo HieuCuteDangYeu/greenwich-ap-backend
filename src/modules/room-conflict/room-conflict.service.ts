@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { ClassSession } from '../class/entities/class-session.entity';
 import { RoomBookingSlot } from '../room-booking/entities/room-booking-slot.entity';
 import { BookingStatus } from '../room-booking/entities/room-booking.entity';
@@ -33,6 +33,7 @@ export class RoomConflictService {
     excludeSessionId,
     excludeBookingId,
     bookingStatuses = ['APPROVED'],
+    manager,
   }: {
     roomId: number;
     dateOn: string;
@@ -40,12 +41,20 @@ export class RoomConflictService {
     excludeSessionId?: number;
     excludeBookingId?: number;
     bookingStatuses?: BookingStatus[];
+    manager?: EntityManager;
   }): Promise<RoomConflictResult> {
     if (timeSlotIds.length === 0) {
       return { conflictingTimeSlotIds: [], conflicts: [] };
     }
 
-    const sessionQuery = this.classSessionRepository
+    const sessionRepo = manager
+      ? manager.getRepository(ClassSession)
+      : this.classSessionRepository;
+    const bookingSlotRepo = manager
+      ? manager.getRepository(RoomBookingSlot)
+      : this.roomBookingSlotRepository;
+
+    const sessionQuery = sessionRepo
       .createQueryBuilder('session')
       .select(['session.id AS sessionId', 'session.time_slot_id AS timeSlotId'])
       .where('session.room_id = :roomId', { roomId })
@@ -64,7 +73,7 @@ export class RoomConflictService {
       timeSlotId: number;
     }>();
 
-    const bookingQuery = this.roomBookingSlotRepository
+    const bookingQuery = bookingSlotRepo
       .createQueryBuilder('slot')
       .innerJoin('slot.booking', 'booking')
       .select([

@@ -104,37 +104,42 @@ export class ClassService {
       );
     }
 
-    const conflict = await this.roomConflictService.checkRoomConflict({
-      roomId: room.id,
-      dateOn: createSessionDto.dateOn,
-      timeSlotIds: [createSessionDto.timeSlotId],
-    });
+    const savedSession = await this.classSessionRepository.manager.transaction(
+      async (manager) => {
+        const conflict = await this.roomConflictService.checkRoomConflict({
+          roomId: room.id,
+          dateOn: createSessionDto.dateOn,
+          timeSlotIds: [createSessionDto.timeSlotId],
+          manager,
+        });
 
-    if (conflict.conflictingTimeSlotIds.length > 0) {
-      throw new ConflictException({
-        message: `Room is already occupied on ${createSessionDto.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
-          ', ',
-        )}.`,
-        conflicts: conflict.conflictingTimeSlotIds,
-      });
-    }
+        if (conflict.conflictingTimeSlotIds.length > 0) {
+          throw new ConflictException({
+            message: `Room is already occupied on ${createSessionDto.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+              ', ',
+            )}.`,
+            conflicts: conflict.conflictingTimeSlotIds,
+          });
+        }
 
-    const newSession = this.classSessionRepository.create({
-      class: classEntity,
-      course,
-      courseId: course.id,
-      classId: classEntity.id,
-      dateOn: createSessionDto.dateOn,
-      room,
-      roomId: room.id,
-      teacher,
-      teacherId: teacher.id,
-      timeSlot,
-      timeSlotId: timeSlot.id,
-      status: createSessionDto.status ?? 'SCHEDULED',
-    });
+        const newSession = manager.create(ClassSession, {
+          class: classEntity,
+          course,
+          courseId: course.id,
+          classId: classEntity.id,
+          dateOn: createSessionDto.dateOn,
+          room,
+          roomId: room.id,
+          teacher,
+          teacherId: teacher.id,
+          timeSlot,
+          timeSlotId: timeSlot.id,
+          status: createSessionDto.status ?? 'SCHEDULED',
+        });
 
-    const savedSession = await this.classSessionRepository.save(newSession);
+        return manager.save(ClassSession, newSession);
+      },
+    );
 
     // Get all students in this class
     const students = await this.findStudentsByClass(classId);
@@ -280,28 +285,31 @@ export class ClassService {
     const nextTimeSlotId =
       updateDto.timeSlotId ?? session.timeSlotId ?? undefined;
 
-    if (nextTimeSlotId) {
-      const conflict = await this.roomConflictService.checkRoomConflict({
-        roomId: nextRoomId,
-        dateOn: nextDateOn,
-        timeSlotIds: [nextTimeSlotId],
-        excludeSessionId: session.id,
-      });
-
-      if (conflict.conflictingTimeSlotIds.length > 0) {
-        throw new ConflictException({
-          message: `Room is already occupied on ${nextDateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
-            ', ',
-          )}.`,
-          conflicts: conflict.conflictingTimeSlotIds,
+    return this.classSessionRepository.manager.transaction(async (manager) => {
+      if (nextTimeSlotId) {
+        const conflict = await this.roomConflictService.checkRoomConflict({
+          roomId: nextRoomId,
+          dateOn: nextDateOn,
+          timeSlotIds: [nextTimeSlotId],
+          excludeSessionId: session.id,
+          manager,
         });
-      }
-    }
-    if (updateDto.status !== undefined) {
-      session.status = updateDto.status;
-    }
 
-    return this.classSessionRepository.save(session);
+        if (conflict.conflictingTimeSlotIds.length > 0) {
+          throw new ConflictException({
+            message: `Room is already occupied on ${nextDateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+              ', ',
+            )}.`,
+            conflicts: conflict.conflictingTimeSlotIds,
+          });
+        }
+      }
+      if (updateDto.status !== undefined) {
+        session.status = updateDto.status;
+      }
+
+      return manager.save(ClassSession, session);
+    });
   }
 
   async removeSession(classId: number, sessionId: number) {

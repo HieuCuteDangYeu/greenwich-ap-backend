@@ -52,5 +52,5 @@ export class Room {
   sessions?: ClassSession[];
 
   @OneToMany(() => RoomBooking, (booking) => booking.room)
-  bookings?: RoomBooking[];
+  roomBookings?: RoomBooking[];
 }

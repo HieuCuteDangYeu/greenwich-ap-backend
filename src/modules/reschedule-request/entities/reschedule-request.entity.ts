@@ -52,7 +52,7 @@ export class RescheduleRequest {
   @Column({ name: 'new_time_slot_id', type: 'int' })
   newTimeSlotId!: number;
 
-  @ManyToOne(() => TimeSlot, { eager: true, nullable: false })
+  @ManyToOne(() => TimeSlot, { nullable: false })
   @JoinColumn({ name: 'new_time_slot_id' })
   newTimeSlot!: TimeSlot;
 
@@ -60,7 +60,7 @@ export class RescheduleRequest {
   @Column({ name: 'new_room_id', type: 'bigint' })
   newRoomId!: number;
 
-  @ManyToOne(() => Room, { eager: true, nullable: false })
+  @ManyToOne(() => Room, { nullable: false })
   @JoinColumn({ name: 'new_room_id' })
   newRoom!: Room;
 

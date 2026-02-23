@@ -33,7 +33,7 @@ export class RoomBookingSlot {
   @Column({ name: 'time_slot_id', type: 'int' })
   timeSlotId!: number;
 
-  @ManyToOne(() => TimeSlot, { eager: true, nullable: false })
+  @ManyToOne(() => TimeSlot, { nullable: false })
   @JoinColumn({ name: 'time_slot_id' })
   timeSlot!: TimeSlot;
 

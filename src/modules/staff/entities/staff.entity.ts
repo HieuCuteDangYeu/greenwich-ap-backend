@@ -83,6 +83,7 @@ export class Staff {
 
   @OneToMany(() => RescheduleRequest, (request) => request.reviewedByStaff)
   reviewedRescheduleRequests!: RescheduleRequest[];
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

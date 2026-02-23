@@ -42,12 +42,12 @@ export class RoomBookingService {
       throw new BadRequestException('Time slot IDs must be unique.');
     }
 
-    const room = await this.roomRepository.findOne({
-      where: { id: dto.roomId },
-    });
-    if (!room) {
-      throw new NotFoundException(`Room with ID ${dto.roomId} not found`);
-    }
+    // const room = await this.roomRepository.findOne({
+    //   where: { id: dto.roomId },
+    // });
+    // if (!room) {
+    //   throw new NotFoundException(`Room with ID ${dto.roomId} not found`);
+    // }
 
     const requester = await this.userRepository.findOne({
       where: { id: currentUserId },
@@ -67,23 +67,34 @@ export class RoomBookingService {
       );
     }
 
-    const conflict = await this.roomConflictService.checkRoomConflict({
-      roomId: dto.roomId,
-      dateOn: dto.dateOn,
-      timeSlotIds: uniqueSlotIds,
-      bookingStatuses: ['PENDING', 'APPROVED'],
-    });
-
-    if (conflict.conflictingTimeSlotIds.length > 0) {
-      throw new ConflictException({
-        message: `Room is already booked on ${dto.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
-          ', ',
-        )}. Please choose different slots.`,
-        conflicts: conflict.conflictingTimeSlotIds,
-      });
-    }
-
     return this.roomBookingRepository.manager.transaction(async (manager) => {
+      const room = await manager
+        .createQueryBuilder(Room, 'room')
+        .setLock('pessimistic_write')
+        .where('room.id = :roomId', { roomId: dto.roomId })
+        .getOne();
+
+      if (!room) {
+        throw new NotFoundException(`Room with ID ${dto.roomId} not found`);
+      }
+
+      const conflict = await this.roomConflictService.checkRoomConflict({
+        roomId: dto.roomId,
+        dateOn: dto.dateOn,
+        timeSlotIds: uniqueSlotIds,
+        bookingStatuses: ['PENDING', 'APPROVED'],
+        manager,
+      });
+
+      if (conflict.conflictingTimeSlotIds.length > 0) {
+        throw new ConflictException({
+          message: `Room is already booked on ${dto.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+            ', ',
+          )}. Please choose different slots.`,
+          conflicts: conflict.conflictingTimeSlotIds,
+        });
+      }
+
       const booking = manager.create(RoomBooking, {
         room,
         roomId: room.id,
@@ -232,28 +243,40 @@ export class RoomBookingService {
   }
 
   async approve(id: number) {
-    const booking = await this.getBookingForStatusUpdate(id);
+    return this.roomBookingRepository.manager.transaction(async (manager) => {
+      const booking = await manager
+        .createQueryBuilder(RoomBooking, 'booking')
+        .setLock('pessimistic_write', undefined, ['booking']) // CHỈ KHÓA BẢNG 'booking'
+        .leftJoinAndSelect('booking.slots', 'slots')
+        .where('booking.id = :id', { id })
+        .getOne();
 
-    const conflict = await this.roomConflictService.checkRoomConflict({
-      roomId: booking.roomId,
-      dateOn: booking.dateOn,
-      timeSlotIds: booking.slots.map((slot) => slot.timeSlotId),
-      bookingStatuses: ['PENDING', 'APPROVED'],
-      excludeBookingId: booking.id,
-    });
+      if (!booking) {
+        throw new NotFoundException(`Room booking with ID ${id} not found`);
+      }
 
-    if (conflict.conflictingTimeSlotIds.length > 0) {
-      throw new ConflictException({
-        message: `Cannot approve booking. Room is already booked on ${booking.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
-          ', ',
-        )}.`,
-        conflicts: conflict.conflictingTimeSlotIds,
+      const conflict = await this.roomConflictService.checkRoomConflict({
+        roomId: booking.roomId,
+        dateOn: booking.dateOn,
+        timeSlotIds: booking.slots.map((slot) => slot.timeSlotId),
+        bookingStatuses: ['PENDING', 'APPROVED'],
+        excludeBookingId: booking.id,
+        manager,
       });
-    }
 
-    booking.status = 'APPROVED';
-    await this.roomBookingRepository.save(booking);
-    return this.findOne(id);
+      if (conflict.conflictingTimeSlotIds.length > 0) {
+        throw new ConflictException({
+          message: `Cannot approve booking. Room is already booked on ${booking.dateOn} for time slots: ${conflict.conflictingTimeSlotIds.join(
+            ', ',
+          )}.`,
+          conflicts: conflict.conflictingTimeSlotIds,
+        });
+      }
+
+      booking.status = 'APPROVED';
+      await manager.save(RoomBooking, booking);
+      return this.findOneWithManager(manager, id);
+    });
   }
 
   async reject(id: number) {
